@@ -56,6 +56,8 @@ async function processPlayerElement(playerElement: HTMLElement) {
   const playerName = profileLink.textContent?.trim() || 'Unknown';
   const profileUrl = profileLink.href;
   
+  console.log(`VSCL Faceit Finder: Processing player ${playerName} at ${profileUrl}`);
+  
   // Check if we've already processed this player
   if (playerCache[profileUrl]) {
     displayFaceitData(playerElement, playerCache[profileUrl]);
@@ -87,6 +89,8 @@ async function processPlayerElement(playerElement: HTMLElement) {
       return;
     }
     
+    console.log(`VSCL Faceit Finder: Found Steam URL ${steamProfileUrl} for ${playerName}`);
+    
     playerData.steamProfileUrl = steamProfileUrl;
     
     // Now fetch Faceit data using the Steam URL
@@ -96,9 +100,12 @@ async function processPlayerElement(playerElement: HTMLElement) {
         loadingElement.remove();
         
         if (!faceitData.success) {
+          console.log(`VSCL Faceit Finder: Error for ${playerName}:`, faceitData.error);
           displayError(playerElement, faceitData.error || 'Failed to get Faceit data');
           return;
         }
+        
+        console.log(`VSCL Faceit Finder: Found Faceit data for ${playerName}:`, faceitData);
         
         // Store Faceit data
         playerData.faceitData = {
@@ -112,13 +119,13 @@ async function processPlayerElement(playerElement: HTMLElement) {
       })
       .catch((error) => {
         loadingElement.remove();
+        console.error(`VSCL Faceit Finder: Error fetching Faceit data for ${playerName}:`, error);
         displayError(playerElement, 'Error fetching Faceit data');
-        console.error('VSCL Faceit Finder:', error);
       });
   } catch (error) {
     loadingElement.remove();
+    console.error(`VSCL Faceit Finder: Error fetching Steam profile for ${playerName}:`, error);
     displayError(playerElement, 'Error fetching Steam profile');
-    console.error('VSCL Faceit Finder:', error);
   }
 }
 
@@ -132,24 +139,54 @@ async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     
-    // Find the CS2 Steam profile link by looking at all li elements
-    // and filtering for one that contains "Counter Strike 2"
-    const allListItems = Array.from(doc.querySelectorAll('li'));
-    const steamProfileElement = allListItems.find(li => 
-      li.textContent?.includes('Counter Strike 2')
+    // First approach: Look for Counter-Strike 2 in game accounts section
+    const accountsList = doc.querySelectorAll('li');
+    
+    for (const item of accountsList) {
+      const text = item.textContent || '';
+      if (text.includes('Counter Strike 2')) {
+        console.log('Found CS2 account text:', text);
+        
+        // Try to match a Steam ID in any format
+        // Look for Steam64 ID first (a long number)
+        const steamIdMatch = text.match(/\b7656119\d{10}\b/);
+        if (steamIdMatch && steamIdMatch[0]) {
+          return `https://steamcommunity.com/profiles/${steamIdMatch[0]}`;
+        }
+        
+        // Try to find any other ID format
+        const anyNumberMatch = text.match(/\b\d{5,}\b/g);
+        if (anyNumberMatch && anyNumberMatch.length > 0) {
+          // Sort by length, longest first (likely to be the Steam64 ID)
+          const sortedIds = anyNumberMatch.sort((a, b) => b.length - a.length);
+          return `https://steamcommunity.com/profiles/${sortedIds[0]}`;
+        }
+        
+        // Try to find a Steam vanity URL
+        const customUrlMatch = text.match(/steamcommunity\.com\/id\/([^\/\s]+)/);
+        if (customUrlMatch && customUrlMatch[1]) {
+          return `https://steamcommunity.com/id/${customUrlMatch[1]}`;
+        }
+      }
+    }
+    
+    // Second approach: Look for an anchor tag that links to a Steam profile
+    const steamLinks = Array.from(doc.querySelectorAll('a')).filter(
+      a => a.href.includes('steamcommunity.com')
     );
     
-    if (!steamProfileElement) {
-      return null;
+    if (steamLinks.length > 0) {
+      return steamLinks[0].href;
     }
     
-    // Extract the Steam ID from the text content
-    const steamIdMatch = steamProfileElement.textContent?.match(/\d+/);
-    if (!steamIdMatch || !steamIdMatch[0]) {
-      return null;
+    // Third approach: Check for any text that might contain a Steam ID
+    const pageText = doc.body.textContent || '';
+    const steamIdMatches = pageText.match(/\b7656119\d{10}\b/g);
+    if (steamIdMatches && steamIdMatches.length > 0) {
+      return `https://steamcommunity.com/profiles/${steamIdMatches[0]}`;
     }
     
-    return `https://steamcommunity.com/profiles/${steamIdMatch[0]}`;
+    return null;
   } catch (error) {
     console.error('VSCL Faceit Finder: Error fetching VSCL profile', error);
     return null;
@@ -222,11 +259,29 @@ function displayError(playerElement: HTMLElement, errorMessage: string) {
     loadingElement.remove();
   }
   
+  // Remove any existing error
+  const existingError = playerElement.querySelector('.faceit-error');
+  if (existingError) {
+    existingError.remove();
+  }
+  
   // Create error element
   const errorElement = document.createElement('span');
   errorElement.className = 'faceit-error';
   errorElement.textContent = errorMessage;
   profileLink.parentNode?.appendChild(errorElement);
+  
+  // Add a direct search link for manual lookup
+  const playerName = profileLink.textContent?.trim() || '';
+  if (playerName) {
+    const searchLink = document.createElement('a');
+    searchLink.className = 'faceit-link';
+    searchLink.textContent = 'Search';
+    searchLink.href = `https://faceitanalyser.com/finder?q=${encodeURIComponent(playerName)}`;
+    searchLink.target = '_blank';
+    searchLink.title = 'Search manually on Faceit Finder';
+    profileLink.parentNode?.appendChild(searchLink);
+  }
 }
 
 // Run the extension when the page is loaded

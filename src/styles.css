@@ -36,4 +36,15 @@
   color: #ff0000;
   font-style: italic;
   font-size: 12px;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+/* Search link that appears when profile lookup fails */
+.faceit-error + .faceit-link {
+  background-color: #555;
+}
+
+.faceit-error + .faceit-link:hover {
+  background-color: #666;
 } 

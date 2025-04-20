@@ -8,14 +8,16 @@
   ],
   "host_permissions": [
     "https://www.vscl.ru/*",
-    "https://faceitanalyser.com/*"
+    "https://faceitanalyser.com/*",
+    "https://steamcommunity.com/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["https://www.vscl.ru/tournaments/*/matches/*"],
+      "matches": ["https://www.vscl.ru/tournaments/*/matches/*", "https://www.vscl.ru/player/*"],
       "js": ["content.js"],
       "css": ["styles.css"]
     }
