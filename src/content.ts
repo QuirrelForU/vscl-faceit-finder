@@ -21,7 +21,7 @@ interface PlayerData {
 const playerCache: Record<string, PlayerData> = {};
 
 // Main function to initialize the extension
-function initVsclFaceitFinder() {
+async function initVsclFaceitFinder() {
   // Only run on match pages
   if (!window.location.href.includes('/tournaments/') || !window.location.href.includes('/matches/')) {
     return;
@@ -38,10 +38,23 @@ function initVsclFaceitFinder() {
   
   console.log(`VSCL Faceit Finder: Found ${playerElements.length} player elements`);
   
-  // Process each player element
-  playerElements.forEach((playerElement) => {
-    processPlayerElement(playerElement as HTMLElement);
-  });
+  // Process players in small batches to avoid overwhelming the message port
+  const playerElementsArray = Array.from(playerElements);
+  
+  // Process in batches of 2 with a delay between batches
+  for (let i = 0; i < playerElementsArray.length; i += 2) {
+    const batch = playerElementsArray.slice(i, i + 2);
+    
+    // Process this batch
+    for (const playerElement of batch) {
+      processPlayerElement(playerElement as HTMLElement);
+    }
+    
+    // Wait a bit before processing the next batch
+    if (i + 2 < playerElementsArray.length) {
+      await delay(1000);
+    }
+  }
 }
 
 // Process a single player element
@@ -94,6 +107,9 @@ async function processPlayerElement(playerElement: HTMLElement) {
     playerData.steamProfileUrl = steamProfileUrl;
     
     // Now fetch Faceit data using the Steam URL
+    // Add a small delay to avoid too many concurrent requests
+    await delay(500);
+    
     getFaceitData(steamProfileUrl)
       .then((faceitData) => {
         // Remove loading indicator
@@ -284,10 +300,19 @@ function displayError(playerElement: HTMLElement, errorMessage: string) {
   }
 }
 
+// Simple delay function
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // Run the extension when the page is loaded
-document.addEventListener('DOMContentLoaded', initVsclFaceitFinder);
+document.addEventListener('DOMContentLoaded', () => {
+  // Wait a bit to ensure everything is fully loaded
+  setTimeout(initVsclFaceitFinder, 1000);
+});
 
 // Also run it immediately in case the DOM is already loaded
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  setTimeout(initVsclFaceitFinder, 1000); // Small delay to ensure DOM is fully loaded
+  // Add a slightly longer delay for the already-loaded case
+  setTimeout(initVsclFaceitFinder, 1500);
 } 
