@@ -1,5 +1,9 @@
 # VSCL Faceit Finder
 
+1 v 1 page
+cache
+optimize
+
 Chrome extension to find Faceit accounts directly from VSCL.ru player profiles and match pages.
 
 ## Features
