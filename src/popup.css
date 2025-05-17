@@ -110,4 +110,15 @@ h2 {
 
 .cache-status.error {
   color: #f85149;
+}
+
+.star-request {
+  margin-top: 1px;
+  padding: 4px;
+  background: rgba(88, 166, 255, 0.1);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #58a6ff;
+  text-align: center;
+  line-height: 1.4;
 } 
