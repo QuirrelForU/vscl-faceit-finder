@@ -5,7 +5,8 @@ module.exports = {
   mode: 'production',
   entry: {
     content: './src/content.ts',
-    background: './src/background.ts'
+    background: './src/background.ts',
+    popup: './src/popup.ts'
   },
   output: {
     filename: '[name].js',
@@ -29,7 +30,9 @@ module.exports = {
       patterns: [
         { from: 'src/manifest.json', to: 'manifest.json' },
         { from: 'src/icons', to: 'icons', noErrorOnMissing: true },
-        { from: 'src/styles.css', to: 'styles.css', noErrorOnMissing: true }
+        { from: 'src/styles.css', to: 'styles.css', noErrorOnMissing: true },
+        { from: 'src/popup.html', to: 'popup.html' },
+        { from: 'src/popup.css', to: 'popup.css' }
       ]
     })
   ]

@@ -173,4 +173,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     return true;
   }
+
+  if (request.action === 'clearCache') {
+    try {
+      chrome.storage.local.remove('playerCache', () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error clearing cache:', chrome.runtime.lastError);
+          sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          console.log('Cache cleared successfully');
+          sendResponse({ success: true });
+        }
+      });
+    } catch (error) {
+      console.error('Error in clearCache:', error);
+      sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+    return true;
+  }
 }); 
