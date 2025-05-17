@@ -1,13 +1,7 @@
 /**
  * VSCL Faceit Finder Content Script
- * 
- * This script runs on VSCL.ru match pages and adds Faceit ELO information
- * to player entries by fetching data from FaceitAnalyser.
  */
 
-/**
- * Represents player data structure
- */
 interface PlayerData {
   name: string;
   profileUrl: string;
@@ -20,22 +14,54 @@ interface PlayerData {
   };
 }
 
-// Cache to prevent unnecessary API calls
-const playerCache: Record<string, PlayerData> = {};
+interface PlayerCache {
+  byVsclName: Record<string, PlayerData>;
+}
 
-/**
- * Initializes the Faceit finder extension
- * Processes player elements on VSCL match pages
- */
+const playerCache: PlayerCache = {
+  byVsclName: {}
+};
+
+async function loadCache(): Promise<void> {
+  try {
+    const response = await new Promise<any>((resolve) => {
+      chrome.runtime.sendMessage({ action: 'getCache' }, resolve);
+    });
+    
+    if (response && response.cache) {
+      Object.assign(playerCache.byVsclName, response.cache);
+      console.log('VSCL Faceit Finder: Loaded cache from storage:', Object.keys(playerCache.byVsclName));
+    }
+  } catch (error) {
+    console.error('VSCL Faceit Finder: Error loading cache from storage:', error);
+  }
+}
+
+async function saveCache(): Promise<void> {
+  try {
+    await new Promise<void>((resolve) => {
+      chrome.runtime.sendMessage(
+        { action: 'saveCache', cache: playerCache.byVsclName },
+        resolve
+      );
+    });
+    console.log('VSCL Faceit Finder: Saved cache to storage');
+  } catch (error) {
+    console.error('VSCL Faceit Finder: Error saving cache to storage:', error);
+  }
+}
+
 async function initVsclFaceitFinder() {
-  // Only run on match pages
   if (!window.location.href.includes('/tournaments/') || !window.location.href.includes('/matches/')) {
     return;
   }
 
   console.log('VSCL Faceit Finder: Initializing...');
+  console.log('VSCL Faceit Finder: Using VSCL nickname-based caching system');
   
-  // Find all player elements on the page
+  await loadCache();
+  console.log('VSCL Faceit Finder: Currently cached players:', Object.keys(playerCache.byVsclName));
+  
   const playerElements = document.querySelectorAll('.media.my-4');
   if (playerElements.length === 0) {
     console.log('VSCL Faceit Finder: No player elements found');
@@ -44,31 +70,22 @@ async function initVsclFaceitFinder() {
   
   console.log(`VSCL Faceit Finder: Found ${playerElements.length} player elements`);
   
-  // Process players in small batches to avoid overwhelming the message port
   const playerElementsArray = Array.from(playerElements);
   
-  // Process in batches of 2 with a delay between batches
   for (let i = 0; i < playerElementsArray.length; i += 2) {
     const batch = playerElementsArray.slice(i, i + 2);
     
-    // Process this batch
     for (const playerElement of batch) {
       processPlayerElement(playerElement as HTMLElement);
     }
     
-    // Wait a bit before processing the next batch
     if (i + 2 < playerElementsArray.length) {
       await delay(1000);
     }
   }
 }
 
-/**
- * Processes a single player element to fetch and display Faceit data
- * @param playerElement - The HTML element containing player information
- */
 async function processPlayerElement(playerElement: HTMLElement) {
-  // Find the player profile link
   const profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
   if (!profileLink) {
     console.log('VSCL Faceit Finder: No profile link found for player element');
@@ -80,29 +97,30 @@ async function processPlayerElement(playerElement: HTMLElement) {
   
   console.log(`VSCL Faceit Finder: Processing player ${playerName} at ${profileUrl}`);
   
-  // Check if we've already processed this player
-  if (playerCache[profileUrl]) {
-    displayFaceitData(playerElement, playerCache[profileUrl]);
+  if (playerCache.byVsclName[playerName]) {
+    console.log(`VSCL Faceit Finder: Cache hit for ${playerName} - using cached data`);
+    displayFaceitData(playerElement, playerCache.byVsclName[playerName]);
     return;
   }
   
-  // Create player data object
+  console.log(`VSCL Faceit Finder: Cache miss for ${playerName} - fetching new data`);
+  
   const playerData: PlayerData = {
     name: playerName,
     profileUrl,
     element: playerElement
   };
   
-  // Store in cache
-  playerCache[profileUrl] = playerData;
+  playerCache.byVsclName[playerName] = playerData;
+  console.log(`VSCL Faceit Finder: Added ${playerName} to cache. Total cached players: ${Object.keys(playerCache.byVsclName).length}`);
   
-  // Add loading indicator
+  await saveCache();
+  
   const loadingElement = document.createElement('span');
   loadingElement.className = 'faceit-loading';
   loadingElement.textContent = 'Loading Faceit data...';
   profileLink.parentNode?.appendChild(loadingElement);
   
-  // Fetch VSCL profile to get Steam URL
   try {
     const steamProfileUrl = await getSteamProfileUrl(profileUrl);
     if (!steamProfileUrl) {
@@ -115,13 +133,10 @@ async function processPlayerElement(playerElement: HTMLElement) {
     
     playerData.steamProfileUrl = steamProfileUrl;
     
-    // Now fetch Faceit data using the Steam URL
-    // Add a small delay to avoid too many concurrent requests
     await delay(500);
     
     getFaceitData(steamProfileUrl)
-      .then((faceitData) => {
-        // Remove loading indicator
+      .then(async (faceitData) => {
         loadingElement.remove();
         
         if (!faceitData.success) {
@@ -132,14 +147,14 @@ async function processPlayerElement(playerElement: HTMLElement) {
         
         console.log(`VSCL Faceit Finder: Found Faceit data for ${playerName}:`, faceitData);
         
-        // Store Faceit data
         playerData.faceitData = {
           elo: faceitData.elo,
           nickname: faceitData.faceitNickname,
           profileUrl: faceitData.profileUrl
         };
         
-        // Display the data
+        console.log(`VSCL Faceit Finder: Updated cache for ${playerName} with Faceit data`);
+        await saveCache();
         displayFaceitData(playerElement, playerData);
       })
       .catch((error) => {
@@ -154,21 +169,14 @@ async function processPlayerElement(playerElement: HTMLElement) {
   }
 }
 
-/**
- * Extracts Steam profile URL from VSCL player profile
- * @param vsclProfileUrl - The VSCL profile URL
- * @returns Promise resolving to the Steam profile URL or null if not found
- */
 async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null> {
   try {
     const response = await fetch(vsclProfileUrl);
     const html = await response.text();
     
-    // Create a temporary DOM element to parse the HTML
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     
-    // First approach: Look for Counter-Strike 2 in game accounts section
     const accountsList = doc.querySelectorAll('li');
     
     for (const item of accountsList) {
@@ -176,22 +184,17 @@ async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null
       if (text.includes('Counter Strike 2')) {
         console.log('Found CS2 account text:', text);
         
-        // Try to match a Steam ID in any format
-        // Look for Steam64 ID first (a long number)
         const steamIdMatch = text.match(/\b7656119\d{10}\b/);
         if (steamIdMatch && steamIdMatch[0]) {
           return `https://steamcommunity.com/profiles/${steamIdMatch[0]}`;
         }
         
-        // Try to find any other ID format
         const anyNumberMatch = text.match(/\b\d{5,}\b/g);
         if (anyNumberMatch && anyNumberMatch.length > 0) {
-          // Sort by length, longest first (likely to be the Steam64 ID)
           const sortedIds = anyNumberMatch.sort((a, b) => b.length - a.length);
           return `https://steamcommunity.com/profiles/${sortedIds[0]}`;
         }
         
-        // Try to find a Steam vanity URL
         const customUrlMatch = text.match(/steamcommunity\.com\/id\/([^\/\s]+)/);
         if (customUrlMatch && customUrlMatch[1]) {
           return `https://steamcommunity.com/id/${customUrlMatch[1]}`;
@@ -199,7 +202,6 @@ async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null
       }
     }
     
-    // Second approach: Look for an anchor tag that links to a Steam profile
     const steamLinks = Array.from(doc.querySelectorAll('a')).filter(
       a => a.href.includes('steamcommunity.com')
     );
@@ -208,7 +210,6 @@ async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null
       return steamLinks[0].href;
     }
     
-    // Third approach: Check for any text that might contain a Steam ID
     const pageText = doc.body.textContent || '';
     const steamIdMatches = pageText.match(/\b7656119\d{10}\b/g);
     if (steamIdMatches && steamIdMatches.length > 0) {
@@ -222,11 +223,6 @@ async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null
   }
 }
 
-/**
- * Fetches Faceit data from the background script
- * @param steamUrl - The Steam profile URL
- * @returns Promise resolving to Faceit data
- */
 function getFaceitData(steamUrl: string): Promise<any> {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({
@@ -242,11 +238,6 @@ function getFaceitData(steamUrl: string): Promise<any> {
   });
 }
 
-/**
- * Displays Faceit data on the player element
- * @param playerElement - The HTML element to display data on
- * @param playerData - The player data containing Faceit information
- */
 function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
   if (!playerData.faceitData) {
     return;
@@ -285,36 +276,27 @@ function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
   profileLink.parentNode?.appendChild(statsLinkElement);
 }
 
-/**
- * Displays an error message on the player element
- * @param playerElement - The HTML element to display error on
- * @param errorMessage - The error message to display
- */
 function displayError(playerElement: HTMLElement, errorMessage: string) {
   const profileLink = playerElement.querySelector('a.font-weight-normal.text-dark');
   if (!profileLink) {
     return;
   }
   
-  // Remove loading indicator if it exists
   const loadingElement = playerElement.querySelector('.faceit-loading');
   if (loadingElement) {
     loadingElement.remove();
   }
   
-  // Remove any existing error
   const existingError = playerElement.querySelector('.faceit-error');
   if (existingError) {
     existingError.remove();
   }
   
-  // Create error element
   const errorElement = document.createElement('span');
   errorElement.className = 'faceit-error';
   errorElement.textContent = errorMessage;
   profileLink.parentNode?.appendChild(errorElement);
   
-  // Add a direct search link for manual lookup
   const playerName = profileLink.textContent?.trim() || '';
   if (playerName) {
     const searchLink = document.createElement('a');
@@ -327,23 +309,14 @@ function displayError(playerElement: HTMLElement, errorMessage: string) {
   }
 }
 
-/**
- * Creates a delay for a specified number of milliseconds
- * @param ms - Number of milliseconds to delay
- * @returns Promise that resolves after the delay
- */
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Run the extension when the page is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  // Wait a bit to ensure everything is fully loaded
   setTimeout(initVsclFaceitFinder, 1000);
 });
 
-// Also run it immediately in case the DOM is already loaded
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  // Add a slightly longer delay for the already-loaded case
   setTimeout(initVsclFaceitFinder, 1500);
 } 

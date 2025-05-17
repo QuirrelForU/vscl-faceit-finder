@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "description": "Find Faceit profiles for VSCL.ru players",
   "permissions": [
-    "webRequest"
+    "webRequest",
+    "storage"
   ],
   "host_permissions": [
     "https://www.vscl.ru/*",
