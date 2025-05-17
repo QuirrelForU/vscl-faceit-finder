@@ -2,7 +2,7 @@
 
 Расширение для браузера, которое автоматически находит профиль faceit для аккаунта vscl и отображает elo на странице матча.
 
-![](https://komarev.com/ghpvc/?username=vscl-faceit-finder&color=green&style=for-the-badge&label=REPO+VIEWS&abbreviated=true)
+![](https://komarev.com/ghpvc/?username=vscl-faceit-finder&color=green&style=pixel&label=REPO+VIEWS&abbreviated=true)
 
 ## Установка
 
