@@ -44,42 +44,37 @@ h2 {
   gap: 16px;
 }
 
-.info-section p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.4;
-  color: #ccc;
-}
-
-.github-link {
+.author-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+}
+
+.author-link {
   color: #58a6ff;
   text-decoration: none;
   font-size: 13px;
   transition: color 0.2s;
 }
 
-.github-link:hover {
+.author-link:hover {
   color: #79b8ff;
+}
+
+.repo-link {
+  display: flex;
+  align-items: center;
+  color: #8b949e;
+  transition: color 0.2s;
+}
+
+.repo-link:hover {
+  color: #58a6ff;
 }
 
 .github-icon {
   width: 16px;
   height: 16px;
-  opacity: 0.8;
-}
-
-.source-link {
-  color: #58a6ff;
-  text-decoration: none;
-  font-size: 13px;
-  transition: color 0.2s;
-}
-
-.source-link:hover {
-  color: #79b8ff;
 }
 
 .clear-cache-btn {

@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearCacheBtn.addEventListener('click', async () => {
       try {
         clearCacheBtn.disabled = true;
-        clearCacheBtn.textContent = 'Clearing...';
+        clearCacheBtn.textContent = 'Очистка...';
         cacheStatus.textContent = '';
         cacheStatus.className = 'cache-status';
 
@@ -19,15 +19,15 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         });
 
-        cacheStatus.textContent = 'Cache cleared successfully';
+        cacheStatus.textContent = 'Кэш успешно очищен';
         cacheStatus.className = 'cache-status success';
       } catch (error) {
-        cacheStatus.textContent = 'Failed to clear cache';
+        cacheStatus.textContent = 'Ошибка при очистке кэша';
         cacheStatus.className = 'cache-status error';
         console.error('Error clearing cache:', error);
       } finally {
         clearCacheBtn.disabled = false;
-        clearCacheBtn.textContent = 'Clear Cache';
+        clearCacheBtn.textContent = 'Очистить кэш';
       }
     });
   }
