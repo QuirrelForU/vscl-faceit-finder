@@ -257,7 +257,6 @@ function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
     return;
   }
   
-  // Remove any existing Faceit elements
   const existingElo = playerElement.querySelector('.faceit-elo');
   if (existingElo) {
     existingElo.remove();
@@ -273,27 +272,17 @@ function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
     existingAnalyzerLink.remove();
   }
   
-  // Create ELO element
   const eloElement = document.createElement('span');
   eloElement.className = 'faceit-elo';
   eloElement.textContent = `${playerData.faceitData.elo} ELO`;
   profileLink.parentNode?.appendChild(eloElement);
   
-  // Create Faceit profile link
-  const faceitLinkElement = document.createElement('a');
-  faceitLinkElement.className = 'faceit-link';
-  faceitLinkElement.textContent = 'Faceit';
-  faceitLinkElement.href = playerData.faceitData.profileUrl;
-  faceitLinkElement.target = '_blank';
-  profileLink.parentNode?.appendChild(faceitLinkElement);
-
-  // Create Faceit Analyzer link
-  const analyzerLinkElement = document.createElement('a');
-  analyzerLinkElement.className = 'faceit-analyzer-link';
-  analyzerLinkElement.textContent = 'Analyzer';
-  analyzerLinkElement.href = `https://faceitanalyser.com/stats/${playerData.faceitData.nickname}`;
-  analyzerLinkElement.target = '_blank';
-  profileLink.parentNode?.appendChild(analyzerLinkElement);
+  const statsLinkElement = document.createElement('a');
+  statsLinkElement.className = 'faceit-link';
+  statsLinkElement.textContent = 'Stats';
+  statsLinkElement.href = `https://faceitanalyser.com/stats/${playerData.faceitData.nickname}`;
+  statsLinkElement.target = '_blank';
+  profileLink.parentNode?.appendChild(statsLinkElement);
 }
 
 /**
