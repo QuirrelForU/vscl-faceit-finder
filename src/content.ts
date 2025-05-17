@@ -5,6 +5,9 @@
  * to player entries by fetching data from FaceitAnalyser.
  */
 
+/**
+ * Represents player data structure
+ */
 interface PlayerData {
   name: string;
   profileUrl: string;
@@ -20,7 +23,10 @@ interface PlayerData {
 // Cache to prevent unnecessary API calls
 const playerCache: Record<string, PlayerData> = {};
 
-// Main function to initialize the extension
+/**
+ * Initializes the Faceit finder extension
+ * Processes player elements on VSCL match pages
+ */
 async function initVsclFaceitFinder() {
   // Only run on match pages
   if (!window.location.href.includes('/tournaments/') || !window.location.href.includes('/matches/')) {
@@ -57,7 +63,10 @@ async function initVsclFaceitFinder() {
   }
 }
 
-// Process a single player element
+/**
+ * Processes a single player element to fetch and display Faceit data
+ * @param playerElement - The HTML element containing player information
+ */
 async function processPlayerElement(playerElement: HTMLElement) {
   // Find the player profile link
   const profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
@@ -145,7 +154,11 @@ async function processPlayerElement(playerElement: HTMLElement) {
   }
 }
 
-// Fetch Steam profile URL from VSCL player profile
+/**
+ * Extracts Steam profile URL from VSCL player profile
+ * @param vsclProfileUrl - The VSCL profile URL
+ * @returns Promise resolving to the Steam profile URL or null if not found
+ */
 async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null> {
   try {
     const response = await fetch(vsclProfileUrl);
@@ -209,7 +222,11 @@ async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null
   }
 }
 
-// Get Faceit data from background script
+/**
+ * Fetches Faceit data from the background script
+ * @param steamUrl - The Steam profile URL
+ * @returns Promise resolving to Faceit data
+ */
 function getFaceitData(steamUrl: string): Promise<any> {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({
@@ -225,7 +242,11 @@ function getFaceitData(steamUrl: string): Promise<any> {
   });
 }
 
-// Display Faceit data on the player element
+/**
+ * Displays Faceit data on the player element
+ * @param playerElement - The HTML element to display data on
+ * @param playerData - The player data containing Faceit information
+ */
 function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
   if (!playerData.faceitData) {
     return;
@@ -246,6 +267,11 @@ function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
   if (existingLink) {
     existingLink.remove();
   }
+
+  const existingAnalyzerLink = playerElement.querySelector('.faceit-analyzer-link');
+  if (existingAnalyzerLink) {
+    existingAnalyzerLink.remove();
+  }
   
   // Create ELO element
   const eloElement = document.createElement('span');
@@ -260,9 +286,21 @@ function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
   faceitLinkElement.href = playerData.faceitData.profileUrl;
   faceitLinkElement.target = '_blank';
   profileLink.parentNode?.appendChild(faceitLinkElement);
+
+  // Create Faceit Analyzer link
+  const analyzerLinkElement = document.createElement('a');
+  analyzerLinkElement.className = 'faceit-analyzer-link';
+  analyzerLinkElement.textContent = 'Analyzer';
+  analyzerLinkElement.href = `https://faceitanalyser.com/stats/${playerData.faceitData.nickname}`;
+  analyzerLinkElement.target = '_blank';
+  profileLink.parentNode?.appendChild(analyzerLinkElement);
 }
 
-// Display error message
+/**
+ * Displays an error message on the player element
+ * @param playerElement - The HTML element to display error on
+ * @param errorMessage - The error message to display
+ */
 function displayError(playerElement: HTMLElement, errorMessage: string) {
   const profileLink = playerElement.querySelector('a.font-weight-normal.text-dark');
   if (!profileLink) {
@@ -300,7 +338,11 @@ function displayError(playerElement: HTMLElement, errorMessage: string) {
   }
 }
 
-// Simple delay function
+/**
+ * Creates a delay for a specified number of milliseconds
+ * @param ms - Number of milliseconds to delay
+ * @returns Promise that resolves after the delay
+ */
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }

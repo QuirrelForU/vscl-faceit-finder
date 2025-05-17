@@ -26,6 +26,23 @@
   text-decoration: none;
 }
 
+.faceit-analyzer-link {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 2px 8px;
+  background-color: #2a2a2a;
+  color: white !important;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.faceit-analyzer-link:hover {
+  background-color: #3a3a3a;
+  text-decoration: none;
+}
+
 .faceit-loading {
   color: #999;
   font-style: italic;

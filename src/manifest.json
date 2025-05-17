@@ -9,7 +9,8 @@
   "host_permissions": [
     "https://www.vscl.ru/*",
     "https://faceitanalyser.com/*",
-    "https://steamcommunity.com/*"
+    "https://steamcommunity.com/*",
+    "https://www.faceit.com/api/*"
   ],
   "background": {
     "service_worker": "background.js"
