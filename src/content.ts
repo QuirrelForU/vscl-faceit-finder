@@ -18,13 +18,30 @@ interface PlayerCache {
   byVsclName: Record<string, PlayerData>;
 }
 
+interface FaceitResponse {
+  success: boolean;
+  error?: string;
+  faceitNickname?: string;
+  elo?: string;
+  profileUrl?: string;
+}
+
+interface CacheResponse {
+  cache: Record<string, PlayerData>;
+}
+
+interface SaveCacheResponse {
+  success: boolean;
+  error?: string;
+}
+
 const playerCache: PlayerCache = {
   byVsclName: {}
 };
 
 async function loadCache(): Promise<void> {
   try {
-    const response = await new Promise<any>((resolve) => {
+    const response = await new Promise<CacheResponse>((resolve) => {
       chrome.runtime.sendMessage({ action: 'getCache' }, resolve);
     });
     
@@ -39,7 +56,7 @@ async function loadCache(): Promise<void> {
 
 async function saveCache(): Promise<void> {
   try {
-    await new Promise<void>((resolve) => {
+    await new Promise<SaveCacheResponse>((resolve) => {
       chrome.runtime.sendMessage(
         { action: 'saveCache', cache: playerCache.byVsclName },
         resolve
@@ -97,41 +114,46 @@ async function processPlayerElement(playerElement: HTMLElement) {
   
   console.log(`VSCL Faceit Finder: Processing player ${playerName} at ${profileUrl}`);
   
-  if (playerCache.byVsclName[playerName]) {
-    console.log(`VSCL Faceit Finder: Cache hit for ${playerName} - using cached data`);
-    displayFaceitData(playerElement, playerCache.byVsclName[playerName]);
-    return;
+  const existingLoading = playerElement.querySelector('.faceit-loading');
+  if (existingLoading) {
+    existingLoading.remove();
   }
-  
-  console.log(`VSCL Faceit Finder: Cache miss for ${playerName} - fetching new data`);
-  
-  const playerData: PlayerData = {
-    name: playerName,
-    profileUrl,
-    element: playerElement
-  };
-  
-  playerCache.byVsclName[playerName] = playerData;
-  console.log(`VSCL Faceit Finder: Added ${playerName} to cache. Total cached players: ${Object.keys(playerCache.byVsclName).length}`);
-  
-  await saveCache();
+  const existingError = playerElement.querySelector('.faceit-error');
+  if (existingError) {
+    existingError.remove();
+  }
+  const existingLinks = playerElement.querySelectorAll('.faceit-link');
+  existingLinks.forEach(link => link.remove());
   
   const loadingElement = document.createElement('span');
   loadingElement.className = 'faceit-loading';
   loadingElement.textContent = 'Loading Faceit data...';
   profileLink.parentNode?.appendChild(loadingElement);
   
+  await delay(500);
+  
+  if (playerCache.byVsclName[playerName]) {
+    console.log(`VSCL Faceit Finder: Cache hit for ${playerName} - using cached data`);
+    loadingElement.remove();
+    if (playerCache.byVsclName[playerName].faceitData) {
+      displayFaceitData(playerElement, playerCache.byVsclName[playerName]);
+    } else {
+      displayError(playerElement, 'No Faceit profile found', true);
+    }
+    return;
+  }
+  
+  console.log(`VSCL Faceit Finder: Cache miss for ${playerName} - fetching new data`);
+  
   try {
     const steamProfileUrl = await getSteamProfileUrl(profileUrl);
     if (!steamProfileUrl) {
       loadingElement.remove();
-      displayError(playerElement, 'No Steam profile found');
+      displayError(playerElement, 'No Steam profile found', true);
       return;
     }
     
     console.log(`VSCL Faceit Finder: Found Steam URL ${steamProfileUrl} for ${playerName}`);
-    
-    playerData.steamProfileUrl = steamProfileUrl;
     
     await delay(500);
     
@@ -141,31 +163,45 @@ async function processPlayerElement(playerElement: HTMLElement) {
         
         if (!faceitData.success) {
           console.log(`VSCL Faceit Finder: Error for ${playerName}:`, faceitData.error);
-          displayError(playerElement, faceitData.error || 'Failed to get Faceit data');
+          displayError(playerElement, faceitData.error || 'No Faceit profile found', true);
+          return;
+        }
+        
+        if (!faceitData.faceitNickname || !faceitData.elo || !faceitData.profileUrl) {
+          console.log(`VSCL Faceit Finder: Missing Faceit data for ${playerName}`);
+          displayError(playerElement, 'No Faceit profile found', true);
           return;
         }
         
         console.log(`VSCL Faceit Finder: Found Faceit data for ${playerName}:`, faceitData);
         
-        playerData.faceitData = {
-          elo: faceitData.elo,
-          nickname: faceitData.faceitNickname,
-          profileUrl: faceitData.profileUrl
+        const playerData: PlayerData = {
+          name: playerName,
+          profileUrl,
+          element: playerElement,
+          steamProfileUrl,
+          faceitData: {
+            elo: faceitData.elo,
+            nickname: faceitData.faceitNickname,
+            profileUrl: faceitData.profileUrl
+          }
         };
         
-        console.log(`VSCL Faceit Finder: Updated cache for ${playerName} with Faceit data`);
+        playerCache.byVsclName[playerName] = playerData;
+        console.log(`VSCL Faceit Finder: Added ${playerName} to cache with Faceit data. Total cached players: ${Object.keys(playerCache.byVsclName).length}`);
+        
         await saveCache();
         displayFaceitData(playerElement, playerData);
       })
       .catch((error) => {
         loadingElement.remove();
         console.error(`VSCL Faceit Finder: Error fetching Faceit data for ${playerName}:`, error);
-        displayError(playerElement, 'Error fetching Faceit data');
+        displayError(playerElement, 'No Faceit profile found', true);
       });
   } catch (error) {
     loadingElement.remove();
     console.error(`VSCL Faceit Finder: Error fetching Steam profile for ${playerName}:`, error);
-    displayError(playerElement, 'Error fetching Steam profile');
+    displayError(playerElement, 'Error fetching Steam profile', true);
   }
 }
 
@@ -223,12 +259,12 @@ async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null
   }
 }
 
-function getFaceitData(steamUrl: string): Promise<any> {
-  return new Promise((resolve, reject) => {
+function getFaceitData(steamUrl: string): Promise<FaceitResponse> {
+  return new Promise((resolve: (value: FaceitResponse) => void, reject: (reason?: any) => void) => {
     chrome.runtime.sendMessage({
       action: 'getFaceitProfile',
       steamUrl
-    }, (response) => {
+    }, (response: FaceitResponse) => {
       if (chrome.runtime.lastError) {
         reject(chrome.runtime.lastError);
       } else {
@@ -276,20 +312,10 @@ function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
   profileLink.parentNode?.appendChild(statsLinkElement);
 }
 
-function displayError(playerElement: HTMLElement, errorMessage: string) {
+function displayError(playerElement: HTMLElement, errorMessage: string, showRetry: boolean = false) {
   const profileLink = playerElement.querySelector('a.font-weight-normal.text-dark');
   if (!profileLink) {
     return;
-  }
-  
-  const loadingElement = playerElement.querySelector('.faceit-loading');
-  if (loadingElement) {
-    loadingElement.remove();
-  }
-  
-  const existingError = playerElement.querySelector('.faceit-error');
-  if (existingError) {
-    existingError.remove();
   }
   
   const errorElement = document.createElement('span');
@@ -306,6 +332,19 @@ function displayError(playerElement: HTMLElement, errorMessage: string) {
     searchLink.target = '_blank';
     searchLink.title = 'Search manually on Faceit Finder';
     profileLink.parentNode?.appendChild(searchLink);
+    
+    if (showRetry) {
+      const retryLink = document.createElement('a');
+      retryLink.className = 'faceit-link';
+      retryLink.textContent = 'Retry';
+      retryLink.href = '#';
+      retryLink.title = 'Retry fetching Faceit data';
+      retryLink.onclick = (e) => {
+        e.preventDefault();
+        processPlayerElement(playerElement);
+      };
+      profileLink.parentNode?.appendChild(retryLink);
+    }
   }
 }
 

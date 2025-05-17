@@ -126,17 +126,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const { steamUrl } = request;
     console.log('Fetching Faceit profile for Steam URL:', steamUrl);
     
-    fetchFaceitProfile(steamUrl)
-      .then(response => {
+    (async () => {
+      try {
+        const response = await fetchFaceitProfile(steamUrl);
         console.log('Sending response:', response);
         sendResponse(response);
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Error in getFaceitProfile:', error);
-        sendResponse({ success: false, error: error.message });
-      });
+        sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+      }
+    })();
     
-    return true; // Keep the message channel open for async response
+    return true;
   }
   
   if (request.action === 'getCache') {
