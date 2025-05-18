@@ -12,6 +12,7 @@ interface PlayerData {
     nickname: string;
     profileUrl: string;
   };
+  timestamp?: number; // Unix timestamp when the data was cached
 }
 
 interface PlayerCache {
@@ -46,8 +47,22 @@ async function loadCache(): Promise<void> {
     });
     
     if (response && response.cache) {
-      Object.assign(playerCache.byVsclName, response.cache);
+      const now = Date.now();
+      const oneHourInMs = 60 * 60 * 1000;
+      
+      const validCache = Object.entries(response.cache).reduce((acc, [key, value]) => {
+        if (value.timestamp && (now - value.timestamp) < oneHourInMs) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as Record<string, PlayerData>);
+      
+      Object.assign(playerCache.byVsclName, validCache);
       console.log('VSCL Faceit Finder: Loaded cache from storage:', Object.keys(playerCache.byVsclName));
+      
+      if (Object.keys(validCache).length !== Object.keys(response.cache).length) {
+        await saveCache();
+      }
     }
   } catch (error) {
     console.error('VSCL Faceit Finder: Error loading cache from storage:', error);
@@ -184,7 +199,8 @@ async function processPlayerElement(playerElement: HTMLElement) {
             elo: faceitData.elo,
             nickname: faceitData.faceitNickname,
             profileUrl: faceitData.profileUrl
-          }
+          },
+          timestamp: Date.now()
         };
         
         playerCache.byVsclName[playerName] = playerData;
