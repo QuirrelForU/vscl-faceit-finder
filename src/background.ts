@@ -88,9 +88,17 @@ async function fetchFaceitProfile(steamUrl: string): Promise<any> {
     if (!searchData.payload || searchData.payload.length === 0) {
       return { success: false, error: 'No Faceit profile found' };
     }
-    
-    const faceitNickname = searchData.payload[0].nickname;
-    console.log('Found Faceit nickname:', faceitNickname);
+
+    const cs2Account = searchData.payload.find((account: any) => 
+      account.games && account.games.some((game: any) => game.name === 'cs2')
+    );
+
+    if (!cs2Account) {
+      return { success: false, error: 'No CS2 Faceit profile found' };
+    }
+
+    const faceitNickname = cs2Account.nickname;
+    console.log('Found Faceit nickname with CS2:', faceitNickname);
     
     // Get player details including ELO
     const detailsResponse = await fetchWithRetry(
@@ -98,6 +106,8 @@ async function fetchFaceitProfile(steamUrl: string): Promise<any> {
     );
     const detailsData = await detailsResponse.json();
     
+    console.log('Response from faceit API:', `https://www.faceit.com/api/users/v1/nicknames/${faceitNickname}`, detailsData);
+
     if (!detailsData.payload || !detailsData.payload.games || !detailsData.payload.games.cs2) {
       return { success: false, error: 'No CS2 data found' };
     }
