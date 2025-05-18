@@ -232,8 +232,8 @@ async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null
     const accountsList = doc.querySelectorAll('li');
     
     for (const item of accountsList) {
-      const text = item.textContent || '';
-      if (text.includes('Counter Strike 2')) {
+      const text = item.textContent?.trim() || '';
+      if (text.startsWith('Counter Strike 2')) {
         console.log('Found CS2 account text:', text);
         
         const steamIdMatch = text.match(/\b7656119\d{10}\b/);
