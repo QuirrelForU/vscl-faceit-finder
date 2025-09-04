@@ -40,6 +40,8 @@ const playerCache: PlayerCache = {
   byVsclName: {}
 };
 
+var currentGame: string | undefined = ''
+
 async function loadCache(): Promise<void> {
   try {
     const response = await new Promise<CacheResponse>((resolve) => {
@@ -87,13 +89,16 @@ async function initVsclFaceitFinder() {
   if (!window.location.href.includes('/tournaments/') || !window.location.href.includes('/matches/')) {
     return;
   }
-
+  
   console.log('VSCL Faceit Finder: Initializing...');
   console.log('VSCL Faceit Finder: Using VSCL nickname-based caching system');
   
   await loadCache();
   console.log('VSCL Faceit Finder: Currently cached players:', Object.keys(playerCache.byVsclName));
   
+  currentGame = getCurrentGame()
+  console.log(`VSCL Faceit Finder: Found game ${currentGame}`)
+
   const playerElements = document.querySelectorAll('.media.my-4');
   if (playerElements.length === 0) {
     console.log('VSCL Faceit Finder: No player elements found');
@@ -276,9 +281,11 @@ async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null
 }
 
 function getFaceitData(steamUrl: string): Promise<FaceitResponse> {
+  const action = currentGame === 'Dota2' ? 'getDotabuffProfile' : 'getFaceitProfile';
+  
   return new Promise((resolve: (value: FaceitResponse) => void, reject: (reason?: any) => void) => {
     chrome.runtime.sendMessage({
-      action: 'getFaceitProfile',
+      action: action,
       steamUrl
     }, (response: FaceitResponse) => {
       if (chrome.runtime.lastError) {
@@ -288,6 +295,11 @@ function getFaceitData(steamUrl: string): Promise<FaceitResponse> {
       }
     });
   });
+}
+
+function getCurrentGame(): string | undefined {
+  const game = document.querySelector('div.discipline')?.textContent?.toString().trim();
+  return game
 }
 
 function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
@@ -317,13 +329,14 @@ function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
   
   const eloElement = document.createElement('span');
   eloElement.className = 'faceit-elo';
-  eloElement.textContent = `${playerData.faceitData.elo} ELO`;
+  eloElement.textContent = `${playerData.faceitData.elo} ${currentGame === 'Dota2' ? '': 'ELO'}`;
   profileLink.parentNode?.appendChild(eloElement);
   
+  const hrefLink = currentGame === 'Dota2' ? 'dotabuff.com/players' : 'faceitanalyser.com/stats'
   const statsLinkElement = document.createElement('a');
   statsLinkElement.className = 'faceit-link';
   statsLinkElement.textContent = 'Stats';
-  statsLinkElement.href = `https://faceitanalyser.com/stats/${playerData.faceitData.nickname}`;
+  statsLinkElement.href = `https://${hrefLink}/${playerData.faceitData.nickname}`;
   statsLinkElement.target = '_blank';
   profileLink.parentNode?.appendChild(statsLinkElement);
 }
