@@ -99,10 +99,9 @@ async function initVsclFaceitFinder() {
   currentGame = getCurrentGame()
   console.log(`VSCL Faceit Finder: Found game ${currentGame}`)
 
-  const playerElements = document.querySelectorAll('.media.my-4');
+  var playerElements = document.querySelectorAll('.media.my-4');
   if (playerElements.length === 0) {
-    console.log('VSCL Faceit Finder: No player elements found');
-    return;
+    playerElements = document.querySelectorAll('.name.mb-1');
   }
   
   console.log(`VSCL Faceit Finder: Found ${playerElements.length} player elements`);
@@ -123,10 +122,9 @@ async function initVsclFaceitFinder() {
 }
 
 async function processPlayerElement(playerElement: HTMLElement) {
-  const profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
+  var profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
   if (!profileLink) {
-    console.log('VSCL Faceit Finder: No profile link found for player element');
-    return;
+    profileLink = playerElement.querySelector('a.text-dark') as HTMLAnchorElement;
   }
   
   const playerName = profileLink.textContent?.trim() || 'Unknown';
@@ -307,9 +305,9 @@ function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
     return;
   }
   
-  const profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
+  var profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
   if (!profileLink) {
-    return;
+    profileLink = playerElement.querySelector('a.text-dark') as HTMLAnchorElement;
   }
   
   const existingElo = playerElement.querySelector('.faceit-elo');
@@ -342,9 +340,9 @@ function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
 }
 
 function displayError(playerElement: HTMLElement, errorMessage: string, showRetry: boolean = false) {
-  const profileLink = playerElement.querySelector('a.font-weight-normal.text-dark');
+  var profileLink = playerElement.querySelector('a.font-weight-normal.text-dark');
   if (!profileLink) {
-    return;
+    profileLink = playerElement.querySelector('a.text-dark') as HTMLAnchorElement;
   }
   
   const errorElement = document.createElement('span');
