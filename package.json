@@ -1,6 +1,6 @@
 {
   "name": "vscl-faceit-finder",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Chrome extension to find Faceit profiles for VSCL.ru players",
   "main": "index.js",
   "scripts": {

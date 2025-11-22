@@ -12,7 +12,7 @@ build:
 package:
     just build
     @echo "Creating zip package..."
-    sh -c 'if command -v zip >/dev/null 2>&1; then cd dist && zip -r ../vscl-faceit-finder-1.1.2.zip * && cd ..; elif command -v powershell.exe >/dev/null 2>&1; then powershell.exe -Command "Compress-Archive -Path dist\\* -DestinationPath vscl-faceit-finder-1.1.2.zip -Force"; else echo "Error: Neither zip nor powershell.exe found"; exit 1; fi'
+    sh -c 'VERSION=$(node -p "require(\"./package.json\").version"); if command -v zip >/dev/null 2>&1; then cd dist && zip -r ../vscl-faceit-finder-${VERSION}.zip * && cd ..; elif command -v powershell.exe >/dev/null 2>&1; then powershell.exe -Command "Compress-Archive -Path dist\\* -DestinationPath vscl-faceit-finder-${VERSION}.zip -Force"; else echo "Error: Neither zip nor powershell.exe found"; exit 1; fi'
 
 # Clean build artifacts
 clean:

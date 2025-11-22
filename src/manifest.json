@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VSCL Faceit Finder",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Find Faceit profiles for VSCL.ru players",
   "permissions": [
     "webRequest",
