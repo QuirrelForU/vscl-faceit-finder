@@ -66,6 +66,57 @@ function extractSteamId(steamUrl: string): string | null {
 }
 
 /**
+ * Fetches Dotabuff profile data for a Steam URL
+ * @param steamUrl - The Steam profile URL
+ * @returns Promise resolving to Faceit profile data
+ */
+async function fetchDotabuffProfile(steamUrl: string): Promise<any> {
+  const ranks = ['Herald', 'Guardian', 'Crusader', 'Archon', 'Legend', 'Ancient', 'Divine', 'Immortal']
+  const steamIdBaseline = BigInt("76561197960265728");
+  try {
+    const steamId64 = extractSteamId(steamUrl);
+    if (!steamId64) {
+      return { success: false, error: 'Could not extract Steam ID' };
+    }
+    const steamId = (BigInt(steamId64) - steamIdBaseline).toString();
+
+    console.log('Searching player with Steam ID:', steamId);
+
+    const detailsResponse = await fetchWithRetry(
+      `https://api.opendota.com/api/players/${steamId}`
+    );
+    const detailsData = await detailsResponse.json();
+
+    console.log('Response from opendota API:', `https://api.opendota.com/api/players/${steamId}`, detailsData)
+    
+    if (detailsData?.error) {
+      return { success: false, error: 'No Dota2 data found for id' };
+    }
+
+    var rank_tier = detailsData.rank_tier ? detailsData.rank_tier.toString() : 'Uncalibrated';
+    var leaderboard_rank = rank_tier[1] === '0' ? detailsData.leaderboard_rank?.toString() : rank_tier[1];
+    leaderboard_rank = leaderboard_rank === undefined ? '' : leaderboard_rank
+    rank_tier = !isNaN(rank_tier) ? `${ranks[+rank_tier[0] - 1]} ${leaderboard_rank}` : rank_tier;
+
+    const elo = `${rank_tier}`
+    console.log('Found rank:', elo)
+
+    return {
+      success: true,
+      faceitNickname: steamId,
+      elo,
+      profileUrl: `https://www.dotabuff.com/players/${steamId}`
+    };
+  } catch (error) {
+    console.error('Error in fetchDotabuffProfile:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
  * Fetches Faceit profile data for a Steam URL
  * @param steamUrl - The Steam profile URL
  * @returns Promise resolving to Faceit profile data
@@ -150,6 +201,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
+  if (request.action === 'getDotabuffProfile') {
+    const { steamUrl } = request;
+    console.log('Fetching Dotabuff profile for Steam URL', steamUrl);
+
+    (async () => {
+      try {
+        const response = await fetchDotabuffProfile(steamUrl);
+        console.log('Sending response:', response);
+        sendResponse(response);
+      }
+      catch (error) {
+        console.error('Error in getDotabuffProfile:', error);
+        sendResponse({ success: false, error: error instanceof Error ? error.message : "Unknown error" });
+      }
+    })()
+    return true;
+  }
+
   if (request.action === 'getCache') {
     try {
       chrome.storage.local.get('playerCache', (result) => {

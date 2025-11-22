@@ -40,6 +40,8 @@ const playerCache: PlayerCache = {
   byVsclName: {}
 };
 
+var currentGame: string | undefined = ''
+
 async function loadCache(): Promise<void> {
   try {
     const response = await new Promise<CacheResponse>((resolve) => {
@@ -87,17 +89,19 @@ async function initVsclFaceitFinder() {
   if (!window.location.href.includes('/tournaments/') || !window.location.href.includes('/matches/')) {
     return;
   }
-
+  
   console.log('VSCL Faceit Finder: Initializing...');
   console.log('VSCL Faceit Finder: Using VSCL nickname-based caching system');
   
   await loadCache();
   console.log('VSCL Faceit Finder: Currently cached players:', Object.keys(playerCache.byVsclName));
   
-  const playerElements = document.querySelectorAll('.media.my-4');
+  currentGame = getCurrentGame()
+  console.log(`VSCL Faceit Finder: Found game ${currentGame}`)
+
+  var playerElements = document.querySelectorAll('.media.my-4');
   if (playerElements.length === 0) {
-    console.log('VSCL Faceit Finder: No player elements found');
-    return;
+    playerElements = document.querySelectorAll('.name.mb-1');
   }
   
   console.log(`VSCL Faceit Finder: Found ${playerElements.length} player elements`);
@@ -118,10 +122,9 @@ async function initVsclFaceitFinder() {
 }
 
 async function processPlayerElement(playerElement: HTMLElement) {
-  const profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
+  var profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
   if (!profileLink) {
-    console.log('VSCL Faceit Finder: No profile link found for player element');
-    return;
+    profileLink = playerElement.querySelector('a.text-dark') as HTMLAnchorElement;
   }
   
   const playerName = profileLink.textContent?.trim() || 'Unknown';
@@ -276,9 +279,11 @@ async function getSteamProfileUrl(vsclProfileUrl: string): Promise<string | null
 }
 
 function getFaceitData(steamUrl: string): Promise<FaceitResponse> {
+  const action = currentGame === 'Dota2' ? 'getDotabuffProfile' : 'getFaceitProfile';
+  
   return new Promise((resolve: (value: FaceitResponse) => void, reject: (reason?: any) => void) => {
     chrome.runtime.sendMessage({
-      action: 'getFaceitProfile',
+      action: action,
       steamUrl
     }, (response: FaceitResponse) => {
       if (chrome.runtime.lastError) {
@@ -290,14 +295,19 @@ function getFaceitData(steamUrl: string): Promise<FaceitResponse> {
   });
 }
 
+function getCurrentGame(): string | undefined {
+  const game = document.querySelector('div.discipline')?.textContent?.toString().trim();
+  return game
+}
+
 function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
   if (!playerData.faceitData) {
     return;
   }
   
-  const profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
+  var profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
   if (!profileLink) {
-    return;
+    profileLink = playerElement.querySelector('a.text-dark') as HTMLAnchorElement;
   }
   
   const existingElo = playerElement.querySelector('.faceit-elo');
@@ -317,21 +327,22 @@ function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData) {
   
   const eloElement = document.createElement('span');
   eloElement.className = 'faceit-elo';
-  eloElement.textContent = `${playerData.faceitData.elo} ELO`;
+  eloElement.textContent = `${playerData.faceitData.elo} ${currentGame === 'Dota2' ? '': 'ELO'}`;
   profileLink.parentNode?.appendChild(eloElement);
   
+  const hrefLink = currentGame === 'Dota2' ? 'dotabuff.com/players' : 'faceitanalyser.com/stats'
   const statsLinkElement = document.createElement('a');
   statsLinkElement.className = 'faceit-link';
   statsLinkElement.textContent = 'Stats';
-  statsLinkElement.href = `https://faceitanalyser.com/stats/${playerData.faceitData.nickname}`;
+  statsLinkElement.href = `https://${hrefLink}/${playerData.faceitData.nickname}`;
   statsLinkElement.target = '_blank';
   profileLink.parentNode?.appendChild(statsLinkElement);
 }
 
 function displayError(playerElement: HTMLElement, errorMessage: string, showRetry: boolean = false) {
-  const profileLink = playerElement.querySelector('a.font-weight-normal.text-dark');
+  var profileLink = playerElement.querySelector('a.font-weight-normal.text-dark');
   if (!profileLink) {
-    return;
+    profileLink = playerElement.querySelector('a.text-dark') as HTMLAnchorElement;
   }
   
   const errorElement = document.createElement('span');
