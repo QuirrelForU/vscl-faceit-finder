@@ -1,0 +1,255 @@
+/**
+ * UI Renderer for displaying Faceit data
+ */
+
+import { PlayerData } from './types';
+import { logger } from './logger';
+
+let currentGame: string | undefined = '';
+
+export function setCurrentGame(game: string | undefined): void {
+  currentGame = game;
+}
+
+export function displayFaceitData(playerElement: HTMLElement, playerData: PlayerData): void {
+  if (!playerData.faceitData) {
+    return;
+  }
+  
+  var profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
+  if (!profileLink) {
+    profileLink = playerElement.querySelector('a.text-dark') as HTMLAnchorElement;
+  }
+  if (!profileLink) {
+    profileLink = playerElement.querySelector('a[href*="/player/"]') as HTMLAnchorElement;
+  }
+  if (!profileLink) {
+    profileLink = playerElement.querySelector('td a') as HTMLAnchorElement;
+  }
+  
+  if (!profileLink) {
+    return;
+  }
+  
+  const isPlayerPage = window.location.href.includes('/player/');
+  let container: HTMLElement;
+  
+  if (isPlayerPage) {
+    // For player profile pages, try to find a suitable container
+    container = profileLink.parentElement as HTMLElement || playerElement;
+    // If the link is directly in the element, use the element itself
+    if (playerElement === profileLink) {
+      container = profileLink.parentElement as HTMLElement || document.body;
+    }
+  } else {
+    container = profileLink.parentNode as HTMLElement;
+  }
+  
+  const existingElo = playerElement.querySelector('.faceit-elo');
+  if (existingElo) {
+    existingElo.remove();
+  }
+  
+  const existingLink = playerElement.querySelector('.faceit-link');
+  if (existingLink) {
+    existingLink.remove();
+  }
+
+  const existingAnalyzerLink = playerElement.querySelector('.faceit-analyzer-link');
+  if (existingAnalyzerLink) {
+    existingAnalyzerLink.remove();
+  }
+  
+  const eloElement = document.createElement('span');
+  eloElement.className = 'faceit-elo';
+  eloElement.textContent = `${playerData.faceitData.elo} ${currentGame === 'Dota2' ? '': 'ELO'}`;
+  container.appendChild(eloElement);
+  
+  const hrefLink = currentGame === 'Dota2' ? 'dotabuff.com/players' : 'faceitanalyser.com/stats'
+  const statsLinkElement = document.createElement('a');
+  statsLinkElement.className = 'faceit-link';
+  statsLinkElement.textContent = 'Stats';
+  statsLinkElement.href = `https://${hrefLink}/${playerData.faceitData.nickname}`;
+  statsLinkElement.target = '_blank';
+  container.appendChild(statsLinkElement);
+}
+
+export function displayError(playerElement: HTMLElement, errorMessage: string, showRetry: boolean = false): void {
+  var profileLink = playerElement.querySelector('a.font-weight-normal.text-dark') as HTMLAnchorElement;
+  if (!profileLink) {
+    profileLink = playerElement.querySelector('a.text-dark') as HTMLAnchorElement;
+  }
+  if (!profileLink) {
+    profileLink = playerElement.querySelector('a[href*="/player/"]') as HTMLAnchorElement;
+  }
+  if (!profileLink) {
+    profileLink = playerElement.querySelector('td a') as HTMLAnchorElement;
+  }
+  
+  if (!profileLink) {
+    return;
+  }
+  
+  const isPlayerPage = window.location.href.includes('/player/');
+  let container: HTMLElement;
+  
+  if (isPlayerPage) {
+    // For player profile pages, try to find a suitable container
+    container = profileLink.parentElement as HTMLElement || playerElement;
+    // If the link is directly in the element, use the element itself
+    if (playerElement === profileLink) {
+      container = profileLink.parentElement as HTMLElement || document.body;
+    }
+  } else {
+    container = profileLink.parentNode as HTMLElement;
+  }
+  
+  const errorElement = document.createElement('span');
+  errorElement.className = 'faceit-error';
+  errorElement.textContent = errorMessage;
+  container.appendChild(errorElement);
+  
+  const playerName = profileLink.textContent?.trim() || '';
+  if (playerName) {
+    const searchLink = document.createElement('a');
+    searchLink.className = 'faceit-link';
+    searchLink.textContent = 'Search';
+    searchLink.href = `https://faceitanalyser.com/finder?q=${encodeURIComponent(playerName)}`;
+    searchLink.target = '_blank';
+    searchLink.title = 'Search manually on Faceit Finder';
+    container.appendChild(searchLink);
+    
+    if (showRetry) {
+      const retryLink = document.createElement('a');
+      retryLink.className = 'faceit-link';
+      retryLink.textContent = 'Retry';
+      retryLink.href = '#';
+      retryLink.title = 'Retry fetching Faceit data';
+      const isPlayerPage = window.location.href.includes('/player/');
+      retryLink.onclick = (e) => {
+        e.preventDefault();
+        // This will be handled by the caller
+        const event = new CustomEvent('faceit-retry', { detail: { element: playerElement } });
+        document.dispatchEvent(event);
+      };
+      container.appendChild(retryLink);
+    }
+  }
+}
+
+export function displayFaceitDataForProfile(containerElement: HTMLElement, playerData: PlayerData): void {
+  if (!playerData.faceitData) {
+    return;
+  }
+  
+  // Clear existing content
+  containerElement.innerHTML = '';
+  
+  // Create a card-like container
+  const cardElement = document.createElement('div');
+  cardElement.className = 'faceit-profile-card';
+  
+  // Create header with label
+  const headerElement = document.createElement('div');
+  headerElement.className = 'faceit-profile-header';
+  headerElement.textContent = currentGame === 'Dota2' ? 'Dotabuff' : 'Faceit';
+  cardElement.appendChild(headerElement);
+  
+  // Create content area
+  const contentElement = document.createElement('div');
+  contentElement.className = 'faceit-profile-content';
+  
+  // ELO/Rank display
+  const eloWrapper = document.createElement('div');
+  eloWrapper.className = 'faceit-profile-elo-wrapper';
+  
+  const eloLabel = document.createElement('span');
+  eloLabel.className = 'faceit-profile-elo-label';
+  eloLabel.textContent = currentGame === 'Dota2' ? 'Rank:' : 'ELO:';
+  
+  const eloValue = document.createElement('span');
+  eloValue.className = 'faceit-profile-elo-value';
+  eloValue.textContent = playerData.faceitData.elo;
+  
+  eloWrapper.appendChild(eloLabel);
+  eloWrapper.appendChild(eloValue);
+  contentElement.appendChild(eloWrapper);
+  
+  // Nickname display
+  const nicknameWrapper = document.createElement('div');
+  nicknameWrapper.className = 'faceit-profile-nickname-wrapper';
+  
+  const nicknameLabel = document.createElement('span');
+  nicknameLabel.className = 'faceit-profile-nickname-label';
+  nicknameLabel.textContent = 'Nickname:';
+  
+  const nicknameValue = document.createElement('span');
+  nicknameValue.className = 'faceit-profile-nickname-value';
+  nicknameValue.textContent = playerData.faceitData.nickname;
+  
+  nicknameWrapper.appendChild(nicknameLabel);
+  nicknameWrapper.appendChild(nicknameValue);
+  contentElement.appendChild(nicknameWrapper);
+  
+  cardElement.appendChild(contentElement);
+  
+  // Stats link button
+  const hrefLink = currentGame === 'Dota2' ? 'dotabuff.com/players' : 'faceitanalyser.com/stats';
+  const statsLinkElement = document.createElement('a');
+  statsLinkElement.className = 'faceit-profile-stats-link';
+  statsLinkElement.textContent = 'View Stats';
+  statsLinkElement.href = `https://${hrefLink}/${playerData.faceitData.nickname}`;
+  statsLinkElement.target = '_blank';
+  cardElement.appendChild(statsLinkElement);
+  
+  containerElement.appendChild(cardElement);
+}
+
+export function displayErrorForProfile(containerElement: HTMLElement, errorMessage: string, showRetry: boolean, playerName: string): void {
+  // Clear existing content
+  containerElement.innerHTML = '';
+  
+  // Create error card
+  const cardElement = document.createElement('div');
+  cardElement.className = 'faceit-profile-card faceit-profile-card-error';
+  
+  const errorIcon = document.createElement('div');
+  errorIcon.className = 'faceit-profile-error-icon';
+  errorIcon.textContent = '⚠';
+  cardElement.appendChild(errorIcon);
+  
+  const errorText = document.createElement('div');
+  errorText.className = 'faceit-profile-error-text';
+  errorText.textContent = errorMessage;
+  cardElement.appendChild(errorText);
+  
+  const actionsElement = document.createElement('div');
+  actionsElement.className = 'faceit-profile-actions';
+  
+  if (playerName) {
+    const searchLink = document.createElement('a');
+    searchLink.className = 'faceit-profile-action-link';
+    searchLink.textContent = 'Search';
+    searchLink.href = `https://faceitanalyser.com/finder?q=${encodeURIComponent(playerName)}`;
+    searchLink.target = '_blank';
+    searchLink.title = 'Search manually on Faceit Finder';
+    actionsElement.appendChild(searchLink);
+    
+    if (showRetry) {
+      const retryLink = document.createElement('a');
+      retryLink.className = 'faceit-profile-action-link';
+      retryLink.textContent = 'Retry';
+      retryLink.href = '#';
+      retryLink.title = 'Retry fetching Faceit data';
+      retryLink.onclick = (e) => {
+        e.preventDefault();
+        const event = new CustomEvent('faceit-retry-profile', { detail: { playerName, containerElement } });
+        document.dispatchEvent(event);
+      };
+      actionsElement.appendChild(retryLink);
+    }
+  }
+  
+  cardElement.appendChild(actionsElement);
+  containerElement.appendChild(cardElement);
+}
