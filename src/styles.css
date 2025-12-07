@@ -47,4 +47,163 @@
 
 .faceit-error + .faceit-link:hover {
   background-color: #666;
+}
+
+/* Styles for player profile page */
+.faceit-profile-container {
+  margin: 15px 0;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.faceit-profile-card {
+  display: block;
+  width: 100%;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.faceit-profile-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.faceit-profile-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f6851f;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.faceit-profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.faceit-profile-elo-wrapper,
+.faceit-profile-nickname-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.faceit-profile-elo-label,
+.faceit-profile-nickname-label {
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+}
+
+.faceit-profile-elo-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #f6851f;
+}
+
+.faceit-profile-nickname-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.faceit-profile-stats-link {
+  display: block;
+  text-align: center;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #f6851f 0%, #e6741e 100%);
+  color: white !important;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.2s ease, transform 0.2s ease;
+  margin-top: 8px;
+}
+
+.faceit-profile-stats-link:hover {
+  background: linear-gradient(135deg, #e6741e 0%, #d5631d 100%);
+  transform: scale(1.02);
+  text-decoration: none;
+  color: white !important;
+}
+
+/* Loading state */
+.faceit-profile-card-loading {
+  text-align: center;
+  padding: 20px;
+}
+
+.faceit-profile-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #3a3a3a;
+  border-top-color: #f6851f;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.faceit-profile-loading-text {
+  color: #999;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Error state */
+.faceit-profile-card-error {
+  text-align: center;
+  padding: 20px;
+}
+
+.faceit-profile-error-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.faceit-profile-error-text {
+  color: #ff6b6b;
+  font-size: 13px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.faceit-profile-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.faceit-profile-action-link {
+  display: inline-block;
+  padding: 6px 12px;
+  background-color: #3a3a3a;
+  color: white !important;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.faceit-profile-action-link:hover {
+  background-color: #4a4a4a;
+  text-decoration: none;
+  color: white !important;
 } 
