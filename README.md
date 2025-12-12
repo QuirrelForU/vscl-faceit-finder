@@ -6,7 +6,7 @@
 ## Установка
 
 ### Chrome Web Store
-Скоро будет доступно в магазине расширений Chrome.
+[Доступно в магазине расширений Chrome.](https://chromewebstore.google.com/detail/acldmkmfjpcdbdidploakmkeadhjcfcb?utm_source=item-share-cb)
 
 ### Вручную
 1. Скачайте последнюю версию расширения из [релизов](https://github.com/QuirrelForU/vscl-faceit-finder/releases), нужен файл vscl-faceit-finder-x.x.x.zip
@@ -30,10 +30,7 @@
 
 ## TODO
 
-- [ ] Добавить отображение elo в профиле игрока vscl
-- [ ] Поддержка 1v1 лобби
 - [ ] Иконки лвл-ов faceit
-- [ ] Улучшить обработку ошибок
 - [ ] Поддержка FireFox
 
 ## Полезно?
