@@ -12,6 +12,11 @@ export interface PlayerData {
     nickname: string;
     profileUrl: string;
   };
+  dota2Data?: {
+    elo: string;
+    nickname: string;
+    profileUrl: string;
+  };
   timestamp?: number; // Unix timestamp when the data was cached
 }
 

@@ -6,7 +6,7 @@ import { PlayerData, FaceitResponse } from './types';
 import { logger } from './logger';
 import { getCachedPlayer, setCachedPlayer, saveCache, getAllCachedPlayers } from './cache-manager';
 import { getSteamProfileUrl } from './steam-fetcher';
-import { displayFaceitData, displayError, displayFaceitDataForProfile, displayErrorForProfile } from './ui-renderer';
+import { displayFaceitData, displayError, displayErrorForProfile } from './ui-renderer';
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -18,6 +18,36 @@ function getFaceitData(steamUrl: string, currentGame: string | undefined): Promi
   return new Promise((resolve: (value: FaceitResponse) => void, reject: (reason?: any) => void) => {
     chrome.runtime.sendMessage({
       action: action,
+      steamUrl
+    }, (response: FaceitResponse) => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError);
+      } else {
+        resolve(response);
+      }
+    });
+  });
+}
+
+function getCS2Data(steamUrl: string): Promise<FaceitResponse> {
+  return new Promise((resolve: (value: FaceitResponse) => void, reject: (reason?: any) => void) => {
+    chrome.runtime.sendMessage({
+      action: 'getFaceitProfile',
+      steamUrl
+    }, (response: FaceitResponse) => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError);
+      } else {
+        resolve(response);
+      }
+    });
+  });
+}
+
+function getDota2Data(steamUrl: string): Promise<FaceitResponse> {
+  return new Promise((resolve: (value: FaceitResponse) => void, reject: (reason?: any) => void) => {
+    chrome.runtime.sendMessage({
+      action: 'getDotabuffProfile',
       steamUrl
     }, (response: FaceitResponse) => {
       if (chrome.runtime.lastError) {
@@ -41,7 +71,7 @@ export async function processPlayerElementForProfile(
   containerElement.innerHTML = '';
   
   const loadingCard = document.createElement('div');
-  loadingCard.className = 'faceit-profile-card faceit-profile-card-loading' + (currentGame === 'Dota2' ? ' faceit-profile-card-dota2' : '');
+  loadingCard.className = 'faceit-profile-card faceit-profile-card-loading';
   
   const loadingSpinner = document.createElement('div');
   loadingSpinner.className = 'faceit-profile-loading-spinner';
@@ -49,7 +79,7 @@ export async function processPlayerElementForProfile(
   
   const loadingText = document.createElement('div');
   loadingText.className = 'faceit-profile-loading-text';
-  loadingText.textContent = currentGame === 'Dota2' ? 'Loading Dotabuff data...' : 'Loading Faceit data...';
+  loadingText.textContent = 'Loading profile data...';
   loadingCard.appendChild(loadingText);
   
   containerElement.appendChild(loadingCard);
@@ -58,13 +88,14 @@ export async function processPlayerElementForProfile(
   
   const cachedPlayer = getCachedPlayer(playerName);
   if (cachedPlayer) {
-    logger.log(`VSCL Faceit Finder: Cache hit for ${playerName} - using cached data`);
+    logger.log(`VSCL Faceit Finder: Cache hit for ${playerName} - using cached data`, {
+      hasFaceitData: !!cachedPlayer.faceitData,
+      hasDota2Data: !!cachedPlayer.dota2Data,
+      faceitProfileUrl: cachedPlayer.faceitData?.profileUrl,
+      dota2ProfileUrl: cachedPlayer.dota2Data?.profileUrl
+    });
     containerElement.innerHTML = '';
-    if (cachedPlayer.faceitData) {
-      displayFaceitDataForProfile(containerElement, cachedPlayer);
-    } else {
-      displayErrorForProfile(containerElement, currentGame === 'Dota2' ? 'No Dotabuff profile found' : 'No Faceit profile found', true, playerName);
-    }
+    displayAllGameDataForProfile(containerElement, cachedPlayer, playerName);
     return;
   }
   
@@ -82,53 +113,235 @@ export async function processPlayerElementForProfile(
     
     await delay(500);
     
-    getFaceitData(steamProfileUrl, currentGame)
-      .then(async (faceitData) => {
-        containerElement.innerHTML = '';
-        
-        if (!faceitData.success) {
-          logger.log(`VSCL Faceit Finder: Error for ${playerName}:`, faceitData.error);
-          displayErrorForProfile(containerElement, faceitData.error || (currentGame === 'Dota2' ? 'No Dotabuff profile found' : 'No Faceit profile found'), true, playerName);
-          return;
-        }
-        
-        if (!faceitData.faceitNickname || !faceitData.elo || !faceitData.profileUrl) {
-          logger.log(`VSCL Faceit Finder: Missing Faceit data for ${playerName}`);
-          displayErrorForProfile(containerElement, currentGame === 'Dota2' ? 'No Dotabuff profile found' : 'No Faceit profile found', true, playerName);
-          return;
-        }
-        
-        logger.log(`VSCL Faceit Finder: Found Faceit data for ${playerName}:`, faceitData);
-        
-        const playerData: PlayerData = {
-          name: playerName,
-          profileUrl,
-          element: containerElement,
-          steamProfileUrl,
-          faceitData: {
-            elo: faceitData.elo,
-            nickname: faceitData.faceitNickname,
-            profileUrl: faceitData.profileUrl
-          },
-          timestamp: Date.now()
+    // Fetch both CS2 and Dota2 data in parallel
+    const [cs2Data, dota2Data] = await Promise.allSettled([
+      getCS2Data(steamProfileUrl),
+      getDota2Data(steamProfileUrl)
+    ]);
+    
+    containerElement.innerHTML = '';
+    
+    const playerData: PlayerData = {
+      name: playerName,
+      profileUrl,
+      element: containerElement,
+      steamProfileUrl,
+      timestamp: Date.now()
+    };
+    
+    // Process CS2 data - verify it's actually CS2 data by checking profileUrl
+    if (cs2Data.status === 'fulfilled' && cs2Data.value.success && 
+        cs2Data.value.faceitNickname && cs2Data.value.elo && cs2Data.value.profileUrl) {
+      const profileUrl = cs2Data.value.profileUrl;
+      // Only store as CS2 if profileUrl contains faceitanalyser (not dotabuff)
+      if (profileUrl.includes('faceitanalyser.com') || profileUrl.includes('faceit.com')) {
+        playerData.faceitData = {
+          elo: cs2Data.value.elo,
+          nickname: cs2Data.value.faceitNickname,
+          profileUrl: profileUrl
         };
-        
-        setCachedPlayer(playerName, playerData);
-        logger.log(`VSCL Faceit Finder: Added ${playerName} to cache with Faceit data. Total cached players: ${Object.keys(getCachedPlayer(playerName) ? {} : {}).length}`);
-        
-        await saveCache();
-        displayFaceitDataForProfile(containerElement, playerData);
-      })
-      .catch((error) => {
-        containerElement.innerHTML = '';
-        // Don't log expected errors - just show user-friendly message
-        displayErrorForProfile(containerElement, currentGame === 'Dota2' ? 'No Dotabuff profile found' : 'No Faceit profile found', true, playerName);
-      });
+        logger.log(`VSCL Faceit Finder: Found CS2 data for ${playerName}`, playerData.faceitData);
+      } else {
+        logger.log(`VSCL Faceit Finder: CS2 API returned non-CS2 profileUrl: ${profileUrl}, skipping`);
+        logger.log(`VSCL Faceit Finder: CS2 API response:`, cs2Data.value);
+      }
+    } else if (cs2Data.status === 'fulfilled') {
+      logger.log(`VSCL Faceit Finder: CS2 API failed or incomplete for ${playerName}:`, cs2Data.value);
+    } else {
+      logger.log(`VSCL Faceit Finder: CS2 API rejected for ${playerName}:`, cs2Data.reason);
+    }
+    
+    // Process Dota2 data - verify it's actually Dota2 data by checking profileUrl
+    if (dota2Data.status === 'fulfilled' && dota2Data.value.success && 
+        dota2Data.value.faceitNickname && dota2Data.value.elo && dota2Data.value.profileUrl) {
+      const profileUrl = dota2Data.value.profileUrl;
+      // Only store as Dota2 if profileUrl contains dotabuff
+      if (profileUrl.includes('dotabuff.com')) {
+        playerData.dota2Data = {
+          elo: dota2Data.value.elo,
+          nickname: dota2Data.value.faceitNickname,
+          profileUrl: profileUrl
+        };
+        logger.log(`VSCL Faceit Finder: Found Dota2 data for ${playerName}`, playerData.dota2Data);
+      } else {
+        logger.log(`VSCL Faceit Finder: Dota2 API returned non-Dota2 profileUrl: ${profileUrl}, skipping`);
+        logger.log(`VSCL Faceit Finder: Dota2 API response:`, dota2Data.value);
+      }
+    } else if (dota2Data.status === 'fulfilled') {
+      logger.log(`VSCL Faceit Finder: Dota2 API failed or incomplete for ${playerName}:`, dota2Data.value);
+    } else {
+      logger.log(`VSCL Faceit Finder: Dota2 API rejected for ${playerName}:`, dota2Data.reason);
+    }
+    
+    // Only cache and display if we found at least one game's data
+    if (playerData.faceitData || playerData.dota2Data) {
+      setCachedPlayer(playerName, playerData);
+      logger.log(`VSCL Faceit Finder: Added ${playerName} to cache. CS2: ${!!playerData.faceitData}, Dota2: ${!!playerData.dota2Data}`);
+      await saveCache();
+      displayAllGameDataForProfile(containerElement, playerData, playerName);
+    } else {
+      // No data found for either game
+      displayErrorForProfile(containerElement, 'No profile found', true, playerName);
+    }
   } catch (error) {
     containerElement.innerHTML = '';
     // Don't log expected errors - just show user-friendly message
     displayErrorForProfile(containerElement, 'Error fetching Steam profile', true, playerName);
   }
+}
+
+function displayAllGameDataForProfile(containerElement: HTMLElement, playerData: PlayerData, playerName: string): void {
+  containerElement.innerHTML = '';
+  
+  logger.log(`VSCL Faceit Finder: displayAllGameDataForProfile for ${playerName}`, {
+    hasFaceitData: !!playerData.faceitData,
+    hasDota2Data: !!playerData.dota2Data,
+    faceitData: playerData.faceitData,
+    dota2Data: playerData.dota2Data
+  });
+  
+  // Detect and migrate old cache structure where Dota2 data might be in faceitData
+  // Check profileUrl to determine game type
+  let cs2Data = playerData.faceitData;
+  let dota2Data = playerData.dota2Data;
+  
+  // If we have faceitData, check if it's actually Dota2 data (old cache structure)
+  if (cs2Data) {
+    const profileUrl = cs2Data.profileUrl || '';
+    if (profileUrl.includes('dotabuff.com')) {
+      // Old cache: Dota2 data stored in faceitData - migrate it
+      logger.log(`VSCL Faceit Finder: Migrating old cache - Dota2 data found in faceitData for ${playerName}`);
+      if (!dota2Data) {
+        // Only migrate if we don't already have dota2Data
+        dota2Data = cs2Data;
+        cs2Data = undefined;
+        // Update cache with correct structure
+        playerData.dota2Data = dota2Data;
+        playerData.faceitData = undefined;
+        setCachedPlayer(playerName, playerData);
+        saveCache(); // Save migrated structure
+      } else {
+        // We already have dota2Data, so this is duplicate - remove from faceitData
+        logger.log(`VSCL Faceit Finder: Removing duplicate Dota2 data from faceitData for ${playerName}`);
+        cs2Data = undefined;
+        playerData.faceitData = undefined;
+        setCachedPlayer(playerName, playerData);
+        saveCache();
+      }
+    }
+  }
+  
+  // Display CS2/Faceit card if available
+  if (cs2Data) {
+    logger.log(`VSCL Faceit Finder: Displaying CS2 card for ${playerName}`, cs2Data);
+    const cs2Card = createGameCard('CS2', cs2Data);
+    containerElement.appendChild(cs2Card);
+  } else {
+    logger.log(`VSCL Faceit Finder: No CS2 data to display for ${playerName}`);
+  }
+  
+  // Display Dota2/Dotabuff card if available
+  if (dota2Data) {
+    logger.log(`VSCL Faceit Finder: Displaying Dota2 card for ${playerName}`, dota2Data);
+    const dota2Card = createGameCard('Dota2', dota2Data);
+    containerElement.appendChild(dota2Card);
+  } else {
+    logger.log(`VSCL Faceit Finder: No Dota2 data to display for ${playerName}`);
+  }
+  
+  // If neither exists, show error
+  if (!cs2Data && !dota2Data) {
+    logger.log(`VSCL Faceit Finder: No game data found for ${playerName}, showing error`);
+    displayErrorForProfile(containerElement, 'No profile found', true, playerName);
+  }
+}
+
+function createGameCard(gameType: 'CS2' | 'Dota2', gameData: { elo: string; nickname: string; profileUrl: string }): HTMLElement {
+  const isDota2 = gameType === 'Dota2';
+  
+  // Create completely independent card element
+  const cardElement = document.createElement('div');
+  cardElement.className = isDota2 ? 'faceit-profile-card faceit-profile-card-dota2' : 'faceit-profile-card';
+  
+  // Header - clearly labeled
+  const headerElement = document.createElement('div');
+  headerElement.className = 'faceit-profile-header';
+  headerElement.textContent = isDota2 ? 'Dotabuff' : 'Faceit';
+  cardElement.appendChild(headerElement);
+  
+  // Content area
+  const contentElement = document.createElement('div');
+  contentElement.className = 'faceit-profile-content';
+  
+  // ELO/Rank display - use gameData.elo (should match the gameType)
+  const eloWrapper = document.createElement('div');
+  eloWrapper.className = 'faceit-profile-elo-wrapper';
+  
+  const eloLabel = document.createElement('span');
+  eloLabel.className = 'faceit-profile-elo-label';
+  eloLabel.textContent = isDota2 ? 'Rank:' : 'ELO:';
+  
+  const eloValue = document.createElement('span');
+  eloValue.className = 'faceit-profile-elo-value';
+  eloValue.textContent = gameData.elo; // Use the elo from gameData
+  
+  eloWrapper.appendChild(eloLabel);
+  eloWrapper.appendChild(eloValue);
+  contentElement.appendChild(eloWrapper);
+  
+  // Nickname display - use gameData.nickname (should match the gameType)
+  const nicknameWrapper = document.createElement('div');
+  nicknameWrapper.className = 'faceit-profile-nickname-wrapper';
+  
+  const nicknameLabel = document.createElement('span');
+  nicknameLabel.className = 'faceit-profile-nickname-label';
+  nicknameLabel.textContent = 'Nickname:';
+  
+  const nicknameValue = document.createElement('span');
+  nicknameValue.className = 'faceit-profile-nickname-value';
+  nicknameValue.textContent = gameData.nickname; // Use the nickname from gameData
+  
+  nicknameWrapper.appendChild(nicknameLabel);
+  nicknameWrapper.appendChild(nicknameValue);
+  contentElement.appendChild(nicknameWrapper);
+  
+  cardElement.appendChild(contentElement);
+  
+  // Links - ensure they match the gameType
+  const linksWrapper = document.createElement('div');
+  linksWrapper.className = 'faceit-profile-links';
+  
+  if (isDota2) {
+    // Dota2 card: only Dotabuff link
+    const statsLinkElement = document.createElement('a');
+    statsLinkElement.className = 'faceit-profile-stats-link faceit-profile-stats-link-dota2';
+    statsLinkElement.textContent = 'View Stats';
+    statsLinkElement.href = `https://dotabuff.com/players/${gameData.nickname}`;
+    statsLinkElement.target = '_blank';
+    statsLinkElement.title = 'View stats on Dotabuff';
+    linksWrapper.appendChild(statsLinkElement);
+  } else {
+    // CS2 card: Faceit Finder stats link + Faceit profile link
+    const statsLinkElement = document.createElement('a');
+    statsLinkElement.className = 'faceit-profile-stats-link';
+    statsLinkElement.textContent = 'View Stats';
+    statsLinkElement.href = `https://faceitanalyser.com/stats/${gameData.nickname}`;
+    statsLinkElement.target = '_blank';
+    statsLinkElement.title = 'View stats on Faceit Finder';
+    linksWrapper.appendChild(statsLinkElement);
+    
+    const profileLinkElement = document.createElement('a');
+    profileLinkElement.className = 'faceit-profile-stats-link faceit-profile-faceit-link';
+    profileLinkElement.textContent = 'View on Faceit';
+    profileLinkElement.href = `https://www.faceit.com/en/players/${gameData.nickname}`;
+    profileLinkElement.target = '_blank';
+    profileLinkElement.title = 'View profile on Faceit (fallback when Faceit Finder is unavailable)';
+    linksWrapper.appendChild(profileLinkElement);
+  }
+  
+  cardElement.appendChild(linksWrapper);
+  
+  return cardElement;
 }
 
 export async function processPlayerElement(

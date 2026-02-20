@@ -65,7 +65,9 @@
 /* Styles for player profile page */
 .faceit-profile-container {
   margin: 15px 0;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
   max-width: 100%;
 }
