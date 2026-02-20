@@ -8,11 +8,11 @@ install:
 build:
     npm run build
 
-# Build and create zip package
+# Build and create zip package (cross-platform: Node script uses PowerShell on Windows, zip on Unix)
 package:
     just build
     @echo "Creating zip package..."
-    sh -c 'VERSION=$(node -p "require(\"./package.json\").version"); if command -v zip >/dev/null 2>&1; then cd dist && zip -r ../vscl-faceit-finder-${VERSION}.zip * && cd ..; elif command -v powershell.exe >/dev/null 2>&1; then powershell.exe -Command "Compress-Archive -Path dist\\* -DestinationPath vscl-faceit-finder-${VERSION}.zip -Force"; else echo "Error: Neither zip nor powershell.exe found"; exit 1; fi'
+    node scripts/create-zip.js
 
 # Clean build artifacts
 clean:
