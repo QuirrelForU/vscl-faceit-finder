@@ -41,7 +41,7 @@ export async function processPlayerElementForProfile(
   containerElement.innerHTML = '';
   
   const loadingCard = document.createElement('div');
-  loadingCard.className = 'faceit-profile-card faceit-profile-card-loading';
+  loadingCard.className = 'faceit-profile-card faceit-profile-card-loading' + (currentGame === 'Dota2' ? ' faceit-profile-card-dota2' : '');
   
   const loadingSpinner = document.createElement('div');
   loadingSpinner.className = 'faceit-profile-loading-spinner';
@@ -49,7 +49,7 @@ export async function processPlayerElementForProfile(
   
   const loadingText = document.createElement('div');
   loadingText.className = 'faceit-profile-loading-text';
-  loadingText.textContent = 'Loading Faceit data...';
+  loadingText.textContent = currentGame === 'Dota2' ? 'Loading Dotabuff data...' : 'Loading Faceit data...';
   loadingCard.appendChild(loadingText);
   
   containerElement.appendChild(loadingCard);
@@ -63,7 +63,7 @@ export async function processPlayerElementForProfile(
     if (cachedPlayer.faceitData) {
       displayFaceitDataForProfile(containerElement, cachedPlayer);
     } else {
-      displayErrorForProfile(containerElement, 'No Faceit profile found', true, playerName);
+      displayErrorForProfile(containerElement, currentGame === 'Dota2' ? 'No Dotabuff profile found' : 'No Faceit profile found', true, playerName);
     }
     return;
   }
@@ -88,13 +88,13 @@ export async function processPlayerElementForProfile(
         
         if (!faceitData.success) {
           logger.log(`VSCL Faceit Finder: Error for ${playerName}:`, faceitData.error);
-          displayErrorForProfile(containerElement, faceitData.error || 'No Faceit profile found', true, playerName);
+          displayErrorForProfile(containerElement, faceitData.error || (currentGame === 'Dota2' ? 'No Dotabuff profile found' : 'No Faceit profile found'), true, playerName);
           return;
         }
         
         if (!faceitData.faceitNickname || !faceitData.elo || !faceitData.profileUrl) {
           logger.log(`VSCL Faceit Finder: Missing Faceit data for ${playerName}`);
-          displayErrorForProfile(containerElement, 'No Faceit profile found', true, playerName);
+          displayErrorForProfile(containerElement, currentGame === 'Dota2' ? 'No Dotabuff profile found' : 'No Faceit profile found', true, playerName);
           return;
         }
         
@@ -122,7 +122,7 @@ export async function processPlayerElementForProfile(
       .catch((error) => {
         containerElement.innerHTML = '';
         // Don't log expected errors - just show user-friendly message
-        displayErrorForProfile(containerElement, 'No Faceit profile found', true, playerName);
+        displayErrorForProfile(containerElement, currentGame === 'Dota2' ? 'No Dotabuff profile found' : 'No Faceit profile found', true, playerName);
       });
   } catch (error) {
     containerElement.innerHTML = '';
@@ -177,7 +177,7 @@ export async function processPlayerElement(
   
   const loadingElement = document.createElement('span');
   loadingElement.className = 'faceit-loading';
-  loadingElement.textContent = 'Loading Faceit data...';
+  loadingElement.textContent = currentGame === 'Dota2' ? 'Loading Dotabuff data...' : 'Loading Faceit data...';
   
   // For player profile pages, append near the link
   if (isPlayerPage) {
@@ -233,7 +233,7 @@ export async function processPlayerElement(
         
         if (!faceitData.faceitNickname || !faceitData.elo || !faceitData.profileUrl) {
           logger.log(`VSCL Faceit Finder: Missing Faceit data for ${playerName}`);
-          displayError(playerElement, 'No Faceit profile found', true);
+          displayError(playerElement, currentGame === 'Dota2' ? 'No Dotabuff profile found' : 'No Faceit profile found', true);
           return;
         }
         
@@ -261,7 +261,7 @@ export async function processPlayerElement(
       .catch((error) => {
         loadingElement.remove();
         // Don't log expected errors - just show user-friendly message
-        displayError(playerElement, 'No Faceit profile found', true);
+        displayError(playerElement, currentGame === 'Dota2' ? 'No Dotabuff profile found' : 'No Faceit profile found', true);
       });
   } catch (error) {
     loadingElement.remove();

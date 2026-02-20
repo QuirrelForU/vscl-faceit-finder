@@ -9,6 +9,19 @@
   font-size: 12px;
 }
 
+/* Dota 2 theme (red, like Dota 2 logo) */
+.faceit-elo-dota2 {
+  background-color: #c6232b;
+}
+
+.faceit-link-dota2 {
+  background-color: #8b1a20;
+}
+
+.faceit-link-dota2:hover {
+  background-color: #a01f26;
+}
+
 .faceit-link {
   display: inline-block;
   margin-left: 5px;
@@ -151,6 +164,32 @@
   transform: scale(1.02);
   text-decoration: none;
   color: white !important;
+}
+
+/* Dota 2 theme for profile card (red like Dota 2 logo) */
+.faceit-profile-card-dota2 .faceit-profile-header,
+.faceit-profile-card-dota2 .faceit-profile-elo-value {
+  color: #c6232b;
+}
+
+.faceit-profile-card-dota2 .faceit-profile-stats-link-dota2 {
+  background: linear-gradient(135deg, #c6232b 0%, #a01f26 100%);
+}
+
+.faceit-profile-card-dota2 .faceit-profile-stats-link-dota2:hover {
+  background: linear-gradient(135deg, #a01f26 0%, #8b1a20 100%);
+}
+
+.faceit-profile-card-dota2.faceit-profile-card-loading .faceit-profile-loading-spinner {
+  border-top-color: #c6232b;
+}
+
+.faceit-profile-card-dota2 .faceit-profile-action-link-dota2 {
+  background-color: #8b1a20;
+}
+
+.faceit-profile-card-dota2 .faceit-profile-action-link-dota2:hover {
+  background-color: #a01f26;
 }
 
 /* Loading state */
