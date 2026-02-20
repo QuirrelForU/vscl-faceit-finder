@@ -11,9 +11,49 @@ function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Normalize game name to the value used by the extension ('Dota2' or undefined for CS2/Faceit).
+ */
+function normalizeGame(game: string | undefined): string | undefined {
+  if (!game || !game.trim()) return undefined;
+  const normalized = game.trim().replace(/\s+/g, '');
+  if (normalized.toLowerCase() === 'dota2') return 'Dota2';
+  return game.trim();
+}
+
+/**
+ * Find match/tournament discipline on the page.
+ * Previously: div.discipline text (normalized). Now also uses src containing "dota2" as a signal.
+ */
 function getCurrentGame(): string | undefined {
+  const isMatchPage = window.location.href.includes('/tournaments/') || window.location.href.includes('/matches/');
+
+  // Reliable signal: any element with src containing "dota2" (e.g. img/icon for the game on the match page)
+  if (document.querySelector('[src*="dota2"]')) return 'Dota2';
+
+  // Primary: div.discipline (used on many VSCL pages)
   const game = document.querySelector('div.discipline')?.textContent?.toString().trim();
-  return game;
+  if (game) return normalizeGame(game);
+
+  // Fallback on match pages: discipline might be in another element or page might show "Dota 2" elsewhere
+  if (isMatchPage) {
+    const disciplines = document.querySelectorAll('[class*="discipline"], .game, [data-game]');
+    for (const el of disciplines) {
+      const text = el.textContent?.trim();
+      if (text && /dota\s*2/i.test(text)) return 'Dota2';
+    }
+    const main = document.querySelector('main, #content, .content, .tournament-content, .match-content');
+    if (main) {
+      const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+      let node: Node | null;
+      while ((node = walker.nextNode())) {
+        const text = node.textContent?.trim() || '';
+        if (/dota\s*2/i.test(text)) return 'Dota2';
+      }
+    }
+  }
+
+  return undefined;
 }
 
 async function initVsclFaceitFinder() {

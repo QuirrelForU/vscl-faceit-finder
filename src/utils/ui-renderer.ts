@@ -59,19 +59,36 @@ export function displayFaceitData(playerElement: HTMLElement, playerData: Player
   if (existingAnalyzerLink) {
     existingAnalyzerLink.remove();
   }
+
+  const existingProfileLink = playerElement.querySelector('.faceit-profile-link');
+  if (existingProfileLink) {
+    existingProfileLink.remove();
+  }
   
   const eloElement = document.createElement('span');
   eloElement.className = 'faceit-elo';
   eloElement.textContent = `${playerData.faceitData.elo} ${currentGame === 'Dota2' ? '': 'ELO'}`;
   container.appendChild(eloElement);
   
-  const hrefLink = currentGame === 'Dota2' ? 'dotabuff.com/players' : 'faceitanalyser.com/stats'
+  const hrefLink = currentGame === 'Dota2' ? 'dotabuff.com/players' : 'faceitanalyser.com/stats';
   const statsLinkElement = document.createElement('a');
   statsLinkElement.className = 'faceit-link';
   statsLinkElement.textContent = 'Stats';
   statsLinkElement.href = `https://${hrefLink}/${playerData.faceitData.nickname}`;
   statsLinkElement.target = '_blank';
+  statsLinkElement.title = 'View stats on Faceit Finder';
   container.appendChild(statsLinkElement);
+
+  // Fallback: link to user profile on faceit.com when Faceit Finder is unavailable
+  if (currentGame !== 'Dota2') {
+    const profileLinkElement = document.createElement('a');
+    profileLinkElement.className = 'faceit-link faceit-profile-link';
+    profileLinkElement.textContent = 'Profile';
+    profileLinkElement.href = `https://www.faceit.com/en/players/${playerData.faceitData.nickname}`;
+    profileLinkElement.target = '_blank';
+    profileLinkElement.title = 'View profile on Faceit';
+    container.appendChild(profileLinkElement);
+  }
 }
 
 export function displayError(playerElement: HTMLElement, errorMessage: string, showRetry: boolean = false): void {
@@ -118,6 +135,14 @@ export function displayError(playerElement: HTMLElement, errorMessage: string, s
     searchLink.target = '_blank';
     searchLink.title = 'Search manually on Faceit Finder';
     container.appendChild(searchLink);
+
+    const faceitSearchLink = document.createElement('a');
+    faceitSearchLink.className = 'faceit-link';
+    faceitSearchLink.textContent = 'Faceit';
+    faceitSearchLink.href = `https://www.faceit.com/en/search?q=${encodeURIComponent(playerName)}`;
+    faceitSearchLink.target = '_blank';
+    faceitSearchLink.title = 'Search on Faceit (fallback when Faceit Finder is unavailable)';
+    container.appendChild(faceitSearchLink);
     
     if (showRetry) {
       const retryLink = document.createElement('a');
@@ -193,14 +218,28 @@ export function displayFaceitDataForProfile(containerElement: HTMLElement, playe
   
   cardElement.appendChild(contentElement);
   
-  // Stats link button
+  // Stats link (Faceit Finder) and fallback link to Faceit profile
+  const linksWrapper = document.createElement('div');
+  linksWrapper.className = 'faceit-profile-links';
   const hrefLink = currentGame === 'Dota2' ? 'dotabuff.com/players' : 'faceitanalyser.com/stats';
   const statsLinkElement = document.createElement('a');
   statsLinkElement.className = 'faceit-profile-stats-link';
   statsLinkElement.textContent = 'View Stats';
   statsLinkElement.href = `https://${hrefLink}/${playerData.faceitData.nickname}`;
   statsLinkElement.target = '_blank';
-  cardElement.appendChild(statsLinkElement);
+  statsLinkElement.title = 'View stats on Faceit Finder';
+  linksWrapper.appendChild(statsLinkElement);
+
+  if (currentGame !== 'Dota2') {
+    const profileLinkElement = document.createElement('a');
+    profileLinkElement.className = 'faceit-profile-stats-link faceit-profile-faceit-link';
+    profileLinkElement.textContent = 'View on Faceit';
+    profileLinkElement.href = `https://www.faceit.com/en/players/${playerData.faceitData.nickname}`;
+    profileLinkElement.target = '_blank';
+    profileLinkElement.title = 'View profile on Faceit (fallback when Faceit Finder is unavailable)';
+    linksWrapper.appendChild(profileLinkElement);
+  }
+  cardElement.appendChild(linksWrapper);
   
   containerElement.appendChild(cardElement);
 }
@@ -234,6 +273,14 @@ export function displayErrorForProfile(containerElement: HTMLElement, errorMessa
     searchLink.target = '_blank';
     searchLink.title = 'Search manually on Faceit Finder';
     actionsElement.appendChild(searchLink);
+
+    const faceitSearchLink = document.createElement('a');
+    faceitSearchLink.className = 'faceit-profile-action-link';
+    faceitSearchLink.textContent = 'Faceit';
+    faceitSearchLink.href = `https://www.faceit.com/en/search?q=${encodeURIComponent(playerName)}`;
+    faceitSearchLink.target = '_blank';
+    faceitSearchLink.title = 'Search on Faceit (fallback when Faceit Finder is unavailable)';
+    actionsElement.appendChild(faceitSearchLink);
     
     if (showRetry) {
       const retryLink = document.createElement('a');

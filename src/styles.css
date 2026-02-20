@@ -118,6 +118,13 @@
   color: #fff;
 }
 
+.faceit-profile-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
 .faceit-profile-stats-link {
   display: block;
   text-align: center;
@@ -129,7 +136,14 @@
   font-weight: 600;
   font-size: 13px;
   transition: background 0.2s ease, transform 0.2s ease;
-  margin-top: 8px;
+}
+
+.faceit-profile-faceit-link {
+  background: linear-gradient(135deg, #3d5a80 0%, #2d4a6a 100%);
+}
+
+.faceit-profile-faceit-link:hover {
+  background: linear-gradient(135deg, #2d4a6a 0%, #1d3a5a 100%);
 }
 
 .faceit-profile-stats-link:hover {
