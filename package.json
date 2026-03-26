@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build": "webpack --config webpack.config.js",
-    "watch": "webpack --config webpack.config.js --watch"
+    "watch": "webpack --config webpack.config.js --watch",
+    "test:e2e": "npm run build && playwright test",
+    "test:e2e:ui": "npm run build && playwright test --ui"
   },
   "keywords": [
     "chrome",
@@ -17,6 +19,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/chrome": "^0.0.260",
+    "@playwright/test": "^1.55.0",
     "copy-webpack-plugin": "^12.0.2",
     "ts-loader": "^9.5.1",
     "typescript": "^5.4.3",

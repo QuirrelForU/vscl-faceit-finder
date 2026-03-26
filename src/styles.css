@@ -14,14 +14,6 @@
   background-color: #c6232b;
 }
 
-.faceit-link-dota2 {
-  background-color: #8b1a20;
-}
-
-.faceit-link-dota2:hover {
-  background-color: #a01f26;
-}
-
 .faceit-link {
   display: inline-block;
   margin-left: 5px;
@@ -37,6 +29,14 @@
 .faceit-link:hover {
   background-color: #333;
   text-decoration: none;
+}
+
+.faceit-link.faceit-link-dota2 {
+  background-color: #8b1a20;
+}
+
+.faceit-link.faceit-link-dota2:hover {
+  background-color: #a01f26;
 }
 
 .faceit-loading {
