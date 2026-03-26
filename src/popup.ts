@@ -1,6 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
   const clearCacheBtn = document.getElementById('clearCache') as HTMLButtonElement;
   const cacheStatus = document.getElementById('cacheStatus');
+  const extensionVersionEl = document.getElementById('extensionVersion');
+
+  if (extensionVersionEl) {
+    try {
+      const manifest = chrome.runtime.getManifest();
+      extensionVersionEl.textContent = manifest.version || 'unknown';
+    } catch {
+      extensionVersionEl.textContent = 'unknown';
+    }
+  }
 
   if (clearCacheBtn && cacheStatus) {
     clearCacheBtn.addEventListener('click', async () => {
