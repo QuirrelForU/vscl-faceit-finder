@@ -5,7 +5,7 @@
 import { PlayerData, FaceitResponse } from './types';
 import { logger } from './logger';
 import { getCachedPlayer, setCachedPlayer, saveCache, getAllCachedPlayers } from './cache-manager';
-import { getSteamProfileUrl } from './steam-fetcher';
+import { getSteamProfileUrl, getSteamProfileUrls } from './steam-fetcher';
 import { displayFaceitData, displayError, displayErrorForProfile } from './ui-renderer';
 
 function delay(ms: number): Promise<void> {
@@ -102,7 +102,8 @@ export async function processPlayerElementForProfile(
   logger.log(`VSCL Faceit Finder: Cache miss for ${playerName} - fetching new data`);
   
   try {
-    const steamProfileUrl = await getSteamProfileUrl(profileUrl);
+    const steamProfileUrls = await getSteamProfileUrls(profileUrl);
+    const steamProfileUrl = steamProfileUrls?.cs2 || steamProfileUrls?.any || steamProfileUrls?.dota2 || null;
     if (!steamProfileUrl) {
       containerElement.innerHTML = '';
       displayErrorForProfile(containerElement, 'No Steam profile found', true, playerName);
@@ -113,10 +114,14 @@ export async function processPlayerElementForProfile(
     
     await delay(500);
     
+    // Prefer per-game Steam URLs on profile pages if available (VSCL can list different SteamIDs for CS2 vs Dota2).
+    const cs2SteamUrl = steamProfileUrls?.cs2 || steamProfileUrl;
+    const dota2SteamUrl = steamProfileUrls?.dota2 || steamProfileUrl;
+
     // Fetch both CS2 and Dota2 data in parallel
     const [cs2Data, dota2Data] = await Promise.allSettled([
-      getCS2Data(steamProfileUrl),
-      getDota2Data(steamProfileUrl)
+      getCS2Data(cs2SteamUrl),
+      getDota2Data(dota2SteamUrl)
     ]);
     
     containerElement.innerHTML = '';

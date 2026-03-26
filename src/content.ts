@@ -28,21 +28,35 @@ function normalizeGame(game: string | undefined): string | undefined {
 function getCurrentGame(): string | undefined {
   const isMatchPage = window.location.href.includes('/tournaments/') || window.location.href.includes('/matches/');
 
-  // Reliable signal: any element with src containing "dota2" (e.g. img/icon for the game on the match page)
-  if (document.querySelector('[src*="dota2"]')) return 'Dota2';
-
   // Primary: div.discipline (used on many VSCL pages)
   const game = document.querySelector('div.discipline')?.textContent?.toString().trim();
   if (game) return normalizeGame(game);
 
   // Fallback on match pages: discipline might be in another element or page might show "Dota 2" elsewhere
   if (isMatchPage) {
+    // Tournament/match header often contains the discipline text (e.g. "… DOTA2." or "… COUNTER STRIKE 2").
+    // This is more reliable than scanning global nav.
+    const headerText = [
+      document.querySelector('h1')?.textContent,
+      document.querySelector('h2')?.textContent,
+      document.querySelector('.tournament-title')?.textContent,
+      document.querySelector('.tournament-name')?.textContent,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    if (/counter\s*strike\s*2/i.test(headerText)) return undefined;
+    if (/dota\s*2/i.test(headerText)) return 'Dota2';
+
+    // Signal: game icon/image within the MAIN match content only (avoid global nav/sidebar icons).
+    const main = document.querySelector('main, #content, .content, .tournament-content, .match-content');
+    if (main && main.querySelector('[src*="dota2"]')) return 'Dota2';
+
     const disciplines = document.querySelectorAll('[class*="discipline"], .game, [data-game]');
     for (const el of disciplines) {
       const text = el.textContent?.trim();
       if (text && /dota\s*2/i.test(text)) return 'Dota2';
     }
-    const main = document.querySelector('main, #content, .content, .tournament-content, .match-content');
     if (main) {
       const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
       let node: Node | null;

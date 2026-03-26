@@ -97,6 +97,20 @@ test.describe('VSCL match pages', () => {
     }
   });
 
+  test('CS2 match (regression): must not show Dota2 ranks', async () => {
+    const { context, page } = await launchWithExtension();
+    try {
+      await gotoMatch(page, 'https://www.vscl.ru/tournaments/2166/matches/97613');
+      await expectCs2MatchUi(page);
+
+      // Ensure we are not in Dota2 mode on this CS2 page.
+      await expect(page.locator('.faceit-elo.faceit-elo-dota2')).toHaveCount(0);
+      await expect(page.locator('a.faceit-link.faceit-link-dota2')).toHaveCount(0);
+    } finally {
+      await context.close();
+    }
+  });
+
   test('Dota2 1v1 match: shows Rank + Stats with red color', async () => {
     const { context, page } = await launchWithExtension();
     try {
